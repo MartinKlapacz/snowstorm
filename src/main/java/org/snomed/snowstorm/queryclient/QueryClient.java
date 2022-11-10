@@ -1,20 +1,21 @@
 package org.snomed.snowstorm.queryclient;
 
-import lombok.NoArgsConstructor;
 import org.snomed.snowstorm.core.data.domain.Concept;
-import org.springframework.beans.factory.annotation.Value;
+import org.snomed.snowstorm.core.data.domain.Description;
+import org.snomed.snowstorm.core.data.domain.Relationship;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 
-import javax.annotation.PostConstruct;
 import java.util.List;
+import java.util.Optional;
 
 public class QueryClient {
 
     private final WebClient webClient;
+
+    private final String BRANCH = "MAIN";
 
     public QueryClient(){
         this.webClient = WebClient.builder()
@@ -24,20 +25,20 @@ public class QueryClient {
                 .build();
     }
 
-    public Concept getConcept(String snomedId) {
+    public Optional<Concept> findConcept(String conceptId) {
         return webClient.get()
-                .uri(uriBuilder -> uriBuilder.path("MAIN/concepts/" + snomedId).build())
+                .uri(uriBuilder -> uriBuilder.path(BRANCH + "/concepts/" + conceptId).build())
                 .retrieve()
                 .bodyToMono(Concept.class)
                 .onErrorStop()
-                .block();
+                .blockOptional();
     }
 
 
-    public List<Concept> getConceptParents(String snomedId) {
+    public List<Concept> findConceptParents(String conceptId) {
         Flux<Concept> conceptFlux = webClient.get()
                 .uri(uriBuilder -> uriBuilder
-                        .path("browser/MAIN/concepts/" + snomedId + "/parents")
+                        .path("browser/" + BRANCH + "/concepts/" + conceptId + "/parents")
                         .queryParam("form", "inferred")
                         .queryParam("includeDescendantCount", "false")
                         .build())
@@ -46,10 +47,10 @@ public class QueryClient {
         return conceptFlux.toStream().toList();
     }
 
-    public List<Concept> getConceptChildren(String snomedId) {
+    public List<Concept> findConceptChildren(String snomedId) {
         Flux<Concept> conceptFlux = webClient.get()
                 .uri(uriBuilder -> uriBuilder
-                        .path("browser/MAIN/concepts/" + snomedId + "/children")
+                        .path("browser/" + BRANCH + "/concepts/" + snomedId + "/children")
                         .queryParam("form", "inferred")
                         .queryParam("includeDescendantCount", "false")
                         .build())
@@ -57,16 +58,37 @@ public class QueryClient {
                 .bodyToFlux(Concept.class);
         return conceptFlux.toStream().toList();
     }
+
+    public Optional<Relationship> findRelationship(String relationshipId) {
+        return webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path(BRANCH + "/relationships/" + relationshipId)
+                        .build())
+                .retrieve()
+                .bodyToMono(Relationship.class)
+                .onErrorStop()
+                .blockOptional();
+    }
+
+    public Optional<Description> findDescription(String descriptionId){
+        return webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path(BRANCH + "/descriptions/" + descriptionId)
+                        .build())
+                .retrieve()
+                .bodyToMono(Description.class)
+                .onErrorStop()
+                .blockOptional();
+    }
+
 
 
 
     public static void main(String[] args) {
-        final String snomedId = "386661006";
+        final String id = "3723501019";
         QueryClient queryClient = new QueryClient();
 
-        System.out.println(queryClient.getConcept(snomedId));
-
-        List<Concept> concepts = queryClient.getConceptChildren(snomedId);
-        System.out.println(concepts);
+        Description description = queryClient.findDescription(id).orElseThrow();
+        System.out.println(description);
     }
 }
