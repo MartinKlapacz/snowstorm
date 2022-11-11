@@ -1,23 +1,29 @@
 package org.snomed.snowstorm.queryclient;
 
-import org.snomed.snowstorm.core.data.domain.Concept;
-import org.snomed.snowstorm.core.data.domain.Description;
-import org.snomed.snowstorm.core.data.domain.Relationship;
+import org.snomed.snowstorm.core.data.domain.*;
+import org.snomed.snowstorm.rest.pojo.ConceptDescriptionsResult;
+import org.snomed.snowstorm.rest.pojo.ItemsPage;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 
+import java.net.URI;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 public class QueryClient {
 
     private final WebClient webClient;
 
+    private final int OFFSET_DEFAULT = 0;
+    private final int LIMIT_DEFAULT = 50;
+
     private final String BRANCH = "MAIN";
 
-    public QueryClient(){
+    public QueryClient() {
         this.webClient = WebClient.builder()
                 .baseUrl("http://localhost:8080/")
                 .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
@@ -34,14 +40,34 @@ public class QueryClient {
                 .blockOptional();
     }
 
+    public List<Concept> findConcepts(int offset, int limit) {
+        ItemsPage<Concept> conceptItemsPage = webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path(BRANCH + "/concepts")
+                        .queryParam("number", offset)
+                        .queryParam("size", limit)
+                        .build())
+                .retrieve()
+                .bodyToMono(ItemsPage.class)
+                .onErrorStop()
+                .block();
+
+        Objects.requireNonNull(conceptItemsPage);
+        return conceptItemsPage.getItems().stream().toList();
+    }
+
 
     public List<Concept> findConceptParents(String conceptId) {
         Flux<Concept> conceptFlux = webClient.get()
-                .uri(uriBuilder -> uriBuilder
-                        .path("browser/" + BRANCH + "/concepts/" + conceptId + "/parents")
-                        .queryParam("form", "inferred")
-                        .queryParam("includeDescendantCount", "false")
-                        .build())
+                .uri(uriBuilder -> {
+                    URI uri = uriBuilder
+                            .path("browser/" + BRANCH + "/concepts/" + conceptId + "/parents")
+                            .queryParam("form", "inferred")
+                            .queryParam("includeDescendantCount", "false")
+                            .build();
+                    System.out.println(uri);
+                    return uri;
+                })
                 .retrieve()
                 .bodyToFlux(Concept.class);
         return conceptFlux.toStream().toList();
@@ -70,7 +96,33 @@ public class QueryClient {
                 .blockOptional();
     }
 
-    public Optional<Description> findDescription(String descriptionId){
+    public List<Relationship> findRelationships(RelationshipQueryOptions queryOptions) {
+
+        ItemsPage<Relationship> relationshipItemsPage = webClient
+                .get()
+                .uri(uriBuilder -> {
+                    uriBuilder = uriBuilder.path(BRANCH + "/relationships");
+                    if (queryOptions.getSourceConcept() != null) {
+                        uriBuilder = uriBuilder.queryParam("source", queryOptions.getSourceConcept());
+                    }
+                    if (queryOptions.getDestinationConcept() != null) {
+                        uriBuilder = uriBuilder.queryParam("destination", queryOptions.getDestinationConcept());
+                    }
+                    return uriBuilder
+                            .queryParam("offset", queryOptions.getOffset() == null ? OFFSET_DEFAULT : queryOptions.getOffset())
+                            .queryParam("limit", queryOptions.getLimit() == null ? LIMIT_DEFAULT : queryOptions.getLimit())
+                            .build();
+                })
+                .retrieve()
+                .bodyToMono(ItemsPage.class)
+                .onErrorStop()
+                .block();
+
+        Objects.requireNonNull(relationshipItemsPage);
+        return relationshipItemsPage.getItems().stream().toList();
+    }
+
+    public Optional<Description> findDescription(String descriptionId) {
         return webClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path(BRANCH + "/descriptions/" + descriptionId)
@@ -81,14 +133,33 @@ public class QueryClient {
                 .blockOptional();
     }
 
-
-
+    public Set<Description> findDescriptionsForConcept(String conceptId) {
+        ConceptDescriptionsResult conceptDescriptionsResult = webClient.get()
+                .uri(uriBuilder -> {
+                    URI uri = uriBuilder
+                            .path(BRANCH + "/concepts/" + conceptId + "/descriptions")
+                            .build();
+                    System.out.println(uri);
+                    return uri;
+                })
+                .retrieve()
+                .bodyToMono(ConceptDescriptionsResult.class)
+                .onErrorStop()
+                .block();
+        Objects.requireNonNull(conceptDescriptionsResult);
+        return conceptDescriptionsResult.getConceptDescriptions();
+    }
 
     public static void main(String[] args) {
-        final String id = "3723501019";
+        final String id = "708865003";
         QueryClient queryClient = new QueryClient();
 
-        Description description = queryClient.findDescription(id).orElseThrow();
-        System.out.println(description);
+        RelationshipQueryOptions options = RelationshipQueryOptions.builder()
+                .sourceConcept(id)
+                .offset(0)
+                .limit(50)
+                .build();
+        System.out.println(queryClient.findDescriptionsForConcept(id));
+
     }
 }
