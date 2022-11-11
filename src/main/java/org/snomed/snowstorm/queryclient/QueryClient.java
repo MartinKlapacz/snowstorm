@@ -1,8 +1,11 @@
 package org.snomed.snowstorm.queryclient;
 
-import org.snomed.snowstorm.core.data.domain.*;
+import org.snomed.snowstorm.core.data.domain.Concept;
+import org.snomed.snowstorm.core.data.domain.Description;
+import org.snomed.snowstorm.core.data.domain.Relationship;
 import org.snomed.snowstorm.rest.pojo.ConceptDescriptionsResult;
 import org.snomed.snowstorm.rest.pojo.ItemsPage;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -48,7 +51,8 @@ public class QueryClient {
                         .queryParam("size", limit)
                         .build())
                 .retrieve()
-                .bodyToMono(ItemsPage.class)
+                .bodyToMono(new ParameterizedTypeReference<ItemsPage<Concept>>() {
+                })
                 .onErrorStop()
                 .block();
 
@@ -97,7 +101,6 @@ public class QueryClient {
     }
 
     public List<Relationship> findRelationships(RelationshipQueryOptions queryOptions) {
-
         ItemsPage<Relationship> relationshipItemsPage = webClient
                 .get()
                 .uri(uriBuilder -> {
@@ -114,7 +117,8 @@ public class QueryClient {
                             .build();
                 })
                 .retrieve()
-                .bodyToMono(ItemsPage.class)
+                .bodyToMono(new ParameterizedTypeReference<ItemsPage<Relationship>>() {
+                })
                 .onErrorStop()
                 .block();
 
@@ -156,10 +160,9 @@ public class QueryClient {
 
         RelationshipQueryOptions options = RelationshipQueryOptions.builder()
                 .sourceConcept(id)
-                .offset(0)
-                .limit(50)
+                .destinationConcept("129287005")
                 .build();
-        System.out.println(queryClient.findDescriptionsForConcept(id));
 
+        System.out.println(queryClient.findRelationships(options));
     }
 }
