@@ -12,6 +12,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 
 import java.net.URI;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -46,7 +47,7 @@ public class QueryClient {
     public List<Concept> findConcepts(int offset, int limit) {
         ItemsPage<Concept> conceptItemsPage = webClient.get()
                 .uri(uriBuilder -> uriBuilder
-                        .path(BRANCH + "/concepts")
+                        .path(Paths.get(BRANCH, "concepts").toString())
                         .queryParam("number", offset)
                         .queryParam("size", limit)
                         .build())
@@ -65,7 +66,7 @@ public class QueryClient {
         Flux<Concept> conceptFlux = webClient.get()
                 .uri(uriBuilder -> {
                     URI uri = uriBuilder
-                            .path("browser/" + BRANCH + "/concepts/" + conceptId + "/parents")
+                            .path(Paths.get("browser", BRANCH, "concepts", conceptId, "parents").toString())
                             .queryParam("form", "inferred")
                             .queryParam("includeDescendantCount", "false")
                             .build();
@@ -80,7 +81,7 @@ public class QueryClient {
     public List<Concept> findConceptChildren(String snomedId) {
         Flux<Concept> conceptFlux = webClient.get()
                 .uri(uriBuilder -> uriBuilder
-                        .path("browser/" + BRANCH + "/concepts/" + snomedId + "/children")
+                        .path(Paths.get("browser", BRANCH, "concepts", snomedId, "children").toString())
                         .queryParam("form", "inferred")
                         .queryParam("includeDescendantCount", "false")
                         .build())
@@ -92,7 +93,7 @@ public class QueryClient {
     public Optional<Relationship> findRelationship(String relationshipId) {
         return webClient.get()
                 .uri(uriBuilder -> uriBuilder
-                        .path(BRANCH + "/relationships/" + relationshipId)
+                        .path(Paths.get(BRANCH, "relationships", relationshipId).toString())
                         .build())
                 .retrieve()
                 .bodyToMono(Relationship.class)
@@ -104,7 +105,7 @@ public class QueryClient {
         ItemsPage<Relationship> relationshipItemsPage = webClient
                 .get()
                 .uri(uriBuilder -> {
-                    uriBuilder = uriBuilder.path(BRANCH + "/relationships");
+                    uriBuilder = uriBuilder.path(Paths.get(BRANCH, "relationships").toString());
                     if (queryOptions.getSourceConcept() != null) {
                         uriBuilder = uriBuilder.queryParam("source", queryOptions.getSourceConcept());
                     }
@@ -129,7 +130,7 @@ public class QueryClient {
     public Optional<Description> findDescription(String descriptionId) {
         return webClient.get()
                 .uri(uriBuilder -> uriBuilder
-                        .path(BRANCH + "/descriptions/" + descriptionId)
+                        .path(Paths.get(BRANCH, "descriptions", descriptionId).toString())
                         .build())
                 .retrieve()
                 .bodyToMono(Description.class)
@@ -141,7 +142,7 @@ public class QueryClient {
         ConceptDescriptionsResult conceptDescriptionsResult = webClient.get()
                 .uri(uriBuilder -> {
                     URI uri = uriBuilder
-                            .path(BRANCH + "/concepts/" + conceptId + "/descriptions")
+                            .path(Paths.get(BRANCH, "concepts", conceptId, "descriptions").toString())
                             .build();
                     System.out.println(uri);
                     return uri;
