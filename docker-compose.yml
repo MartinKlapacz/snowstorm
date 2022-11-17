@@ -1,62 +1,165 @@
-version: '2.1'
+version: '2.2'
 services:
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.7.0
-    container_name: elasticsearch
-    environment:
-      - node.name=snowstorm
-      - cluster.name=snowstorm-cluster
-      - cluster.initial_master_nodes=snowstorm
-      - "ES_JAVA_OPTS=-Xms4g -Xmx4g"
-    volumes:
-      - elastic:/usr/share/elasticsearch/data
-    networks:
-      elastic:
-        aliases:
-         - es
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://es:9200"]
-      interval: 1s
-      timeout: 1s
-      retries: 60
-    ports:
-      - 127.0.0.1:9200:9200
-    mem_reservation: 4g
 
+  ## elk
+  es01:
+    container_name: es01
+    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+    environment:
+      - node.name=es01
+      - cluster.name=${CLUSTER_NAME}
+      - discovery.seed_hosts=es02,es03
+      - cluster.initial_master_nodes=es01,es02,es03
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - data01:/usr/share/elasticsearch/data
+    ports:
+      - ${ELASTICSEARCH_PORT}:9200
+    networks:
+      elk:
+        aliases:
+          - es
+  es02:
+    container_name: es02
+    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+    environment:
+      - node.name=es02
+      - cluster.name=${CLUSTER_NAME}
+      - discovery.seed_hosts=es01,es03
+      - cluster.initial_master_nodes=es01,es02,es03
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - data02:/usr/share/elasticsearch/data
+    networks:
+      - elk
+  es03:
+    container_name: es03
+    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+    environment:
+      - node.name=es03
+      - cluster.name=${CLUSTER_NAME}
+      - discovery.seed_hosts=es01,es02
+      - cluster.initial_master_nodes=es01,es02,es03
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - data03:/usr/share/elasticsearch/data
+    networks:
+      - elk
+
+  kibana:
+    container_name: kibana
+    image: docker.elastic.co/kibana/kibana:${STACK_VERSION}
+    depends_on:
+      - es01
+      - es02
+      - es03
+    volumes:
+      - kibanadata:/usr/share/kibana/data
+    ports:
+      - ${KIBANA_PORT}:5601
+    environment:
+      - SERVERNAME=kibana
+      - ELASTICSEARCH_HOSTS=http://es:${ELASTICSEARCH_PORT}
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
+    mem_limit: ${MEM_LIMIT}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -s -I http://localhost:5601 | grep -q 'HTTP/1.1 302 Found'",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 120
+    networks:
+      - elk
+
+  logstash:
+    container_name: logstash
+    image: docker.elastic.co/logstash/logstash:${STACK_VERSION}
+    volumes:
+      - ./logstash/logstash.yml:/usr/share/logstash/config/logstash.yml
+      - ./logstash/pipeline:/usr/share/logstash/pipeline
+      - ./logstash/logs:/usr/share/logstash/logs
+      - ./aveliosdata:/aveliosdata
+    ports:
+      - 5044:5044
+      - 50000:50000/tcp
+      - 50000:50000/udp
+      - 9600:9600
+    environment:
+      LS_JAVA_OPTS: -Xms256m -Xmx256m
+    networks:
+      - elk
+    depends_on:
+      - es01
+      - es02
+      - es03
+
+## snomed ct
 
   snowstorm:
-    image: snomedinternational/snowstorm:latest
     container_name: snowstorm
-    restart: always
+    image: snomedinternational/snowstorm:latest
     depends_on:
-      elasticsearch:
-        condition: service_healthy
-    entrypoint: java -Xms2g -Xmx4g -jar snowstorm.jar --elasticsearch.urls=http://es:9200
-    networks:
-      elastic:
-        aliases:
-         - snowstorm
+      - es01
+      - es02
+      - es03
+      - kibana
+    # use this if data was already imported
+    entrypoint: java -Xms2g -Xmx4g -jar snowstorm.jar --elasticsearch.urls=http://es:9200 --elasticsearch.username=elastic --elasticsearch.password=changeme
+    # use this if data needs to be imported
+    #    entrypoint: java -Xms2g -Xmx4g -jar snowstorm.jar --elasticsearch.urls=http://es:9200 --elasticsearch.username=elastic --elasticsearch.password=changeme --import=/snomedct.zip
+    # use this if you want to import the full dataset
+    #    entrypoint: java -Xms2g -Xmx4g -jar snowstorm.jar --elasticsearch.urls=http://es:9200 --elasticsearch.username=elastic --elasticsearch.password=changeme --import-full=/snomedct.zip
+    volumes:
+      - ./SnomedCT_InternationalRF2_PRODUCTION_20220930T120000Z.zip:/snomedct.zip
     ports:
-      - 8080:8080
+      - ${SNOWSTORM_PORT}:8080
+    networks:
+      - elk
 
   browser:
-    image: snomedinternational/snomedct-browser:latest
     container_name: browser
+    image: snomedinternational/snomedct-browser:latest
     depends_on:
       - snowstorm
     links:
       - snowstorm:snowstorm
-    networks:
-      - elastic
     environment:
-      - API_HOST=http://snowstorm:8080/
+      - API_HOST=http://snowstorm:${SNOWSTORM_PORT}/
     ports:
-      - 80:80
-    restart: always
+      - ${BROWSER_PORT}:80
+    networks:
+      - elk
 
-
-networks:
-  elastic:
 
 volumes:
-  elastic:
+  data01:
+    driver: local
+  data02:
+    driver: local
+  data03:
+    driver: local
+  kibanadata:
+    driver: local
+
+networks:
+  elk:
+    driver: bridge

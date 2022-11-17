@@ -3,7 +3,7 @@ target
 !.gitignore
 !.travis.yml
 *.iml
-/data
+/aveliosdata
 /release
 /application-*.properties*
 *.log

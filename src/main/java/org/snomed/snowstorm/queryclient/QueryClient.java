@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class QueryClient {
 
@@ -58,7 +59,7 @@ public class QueryClient {
                 .block();
 
         Objects.requireNonNull(conceptItemsPage);
-        return conceptItemsPage.getItems().stream().toList();
+        return conceptItemsPage.getItems().stream().collect(Collectors.toList());
     }
 
 
@@ -75,7 +76,7 @@ public class QueryClient {
                 })
                 .retrieve()
                 .bodyToFlux(Concept.class);
-        return conceptFlux.toStream().toList();
+        return conceptFlux.toStream().collect(Collectors.toList());
     }
 
     public List<Concept> findConceptChildren(String snomedId) {
@@ -87,7 +88,7 @@ public class QueryClient {
                         .build())
                 .retrieve()
                 .bodyToFlux(Concept.class);
-        return conceptFlux.toStream().toList();
+        return conceptFlux.toStream().collect(Collectors.toList());
     }
 
     public Optional<Relationship> findRelationship(String relationshipId) {
@@ -124,7 +125,7 @@ public class QueryClient {
                 .block();
 
         Objects.requireNonNull(relationshipItemsPage);
-        return relationshipItemsPage.getItems().stream().toList();
+        return relationshipItemsPage.getItems().stream().collect(Collectors.toList());
     }
 
     public Optional<Description> findDescription(String descriptionId) {
