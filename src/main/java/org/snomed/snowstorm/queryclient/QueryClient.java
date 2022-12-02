@@ -13,10 +13,7 @@ import reactor.core.publisher.Flux;
 
 import java.net.URI;
 import java.nio.file.Paths;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class QueryClient {
@@ -34,6 +31,17 @@ public class QueryClient {
                 .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
                 .defaultHeader(HttpHeaders.ACCEPT_LANGUAGE, "en-X-900000000000509007", "en-X-900000000000508004", "en")
                 .build();
+
+    }
+
+    public static void main(String[] args) {
+        final String id = "386661006";
+        QueryClient queryClient = new QueryClient();
+
+        List<Concept> concepts = new ArrayList<>();
+        queryClient.findConceptChildrenUntilLevel(id, 1, concepts);
+        concepts.forEach(System.out::println);
+        System.out.println(concepts.size());
     }
 
     public Optional<Concept> findConcept(String conceptId) {
@@ -62,7 +70,6 @@ public class QueryClient {
         return conceptItemsPage.getItems().stream().collect(Collectors.toList());
     }
 
-
     public List<Concept> findConceptParents(String conceptId) {
         Flux<Concept> conceptFlux = webClient.get()
                 .uri(uriBuilder -> {
@@ -80,6 +87,12 @@ public class QueryClient {
     }
 
     public List<Concept> findConceptChildren(String snomedId) {
+        List<Concept> conceptList = Collections.synchronizedList(new ArrayList<>());
+        findConceptChildrenUntilLevel(snomedId, 1, conceptList);
+        return conceptList;
+    }
+
+    public void findConceptChildrenUntilLevel(String snomedId, int level, List<Concept> results) {
         Flux<Concept> conceptFlux = webClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path(Paths.get("browser", BRANCH, "concepts", snomedId, "children").toString())
@@ -88,7 +101,12 @@ public class QueryClient {
                         .build())
                 .retrieve()
                 .bodyToFlux(Concept.class);
-        return conceptFlux.toStream().collect(Collectors.toList());
+        results.addAll(conceptFlux.toStream().toList());
+        if (level > 1) {
+            for (Concept concept : conceptFlux.toIterable()) {
+                findConceptChildrenUntilLevel(concept.getId(), level - 1, results);
+            }
+        }
     }
 
     public Optional<Relationship> findRelationship(String relationshipId) {
@@ -155,16 +173,5 @@ public class QueryClient {
         Objects.requireNonNull(conceptDescriptionsResult);
         return conceptDescriptionsResult.getConceptDescriptions();
     }
-
-    public static void main(String[] args) {
-        final String id = "708865003";
-        QueryClient queryClient = new QueryClient();
-
-        RelationshipQueryOptions options = RelationshipQueryOptions.builder()
-                .sourceConcept(id)
-                .destinationConcept("129287005")
-                .build();
-
-        System.out.println(queryClient.findRelationships(options));
-    }
 }
+
