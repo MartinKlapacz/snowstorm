@@ -1,0 +1,40 @@
+version: '2.2'
+
+services:
+
+  snowstorm:
+    container_name: snowstorm
+    image: snomedinternational/snowstorm:latest
+#    depends_on:
+#      - elasticsearch
+#      - kibana
+    # use this if data was already imported
+#    entrypoint: java -Xms2g -Xmx4g -jar snowstorm.jar --elasticsearch.urls=http://es:9200 --elasticsearch.username=elastic --elasticsearch.password=changeme
+    # use this if data needs to be imported
+    entrypoint: java -Xms2g -Xmx4g -jar snowstorm.jar --elasticsearch.urls=http://es:9200 --elasticsearch.username=elastic --elasticsearch.password=changeme --import=/snomedct.zip
+    # use this if you want to import the full dataset
+    #    entrypoint: java -Xms2g -Xmx4g -jar snowstorm.jar --elasticsearch.urls=http://es:9200 --elasticsearch.username=elastic --elasticsearch.password=changeme --import-full=/snomedct.zip
+    volumes:
+      - ./SnomedCT_InternationalRF2_PRODUCTION_20220930T120000Z.zip:/snomedct.zip
+    ports:
+      - ${SNOWSTORM_PORT}:8080
+    networks:
+      - elk
+
+  browser:
+    container_name: browser
+    image: snomedinternational/snomedct-browser:latest
+    depends_on:
+      - snowstorm
+    links:
+      - snowstorm:snowstorm
+    environment:
+      - API_HOST=http://snowstorm:${SNOWSTORM_PORT}/
+    ports:
+      - ${BROWSER_PORT}:80
+    networks:
+      - elk
+
+networks:
+  elk:
+    driver: bridge
