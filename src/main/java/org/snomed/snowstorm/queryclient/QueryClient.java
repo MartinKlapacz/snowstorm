@@ -101,7 +101,7 @@ public class QueryClient {
                         .build())
                 .retrieve()
                 .bodyToFlux(Concept.class);
-        results.addAll(conceptFlux.toStream().toList());
+        results.addAll(conceptFlux.toStream().collect(Collectors.toList()));
         if (level > 1) {
             for (Concept concept : conceptFlux.toIterable()) {
                 findConceptChildrenUntilLevel(concept.getId(), level - 1, results);
