@@ -7,7 +7,6 @@ services:
     environment:
       - node.name=es01
       - cluster.name=${CLUSTER_NAME}
-#      - discovery.seed_hosts=es02,es03
       - cluster.initial_master_nodes=es01
       - bootstrap.memory_lock=true
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
@@ -38,7 +37,7 @@ services:
       - ELASTICSEARCH_HOSTS=http://es:${ELASTICSEARCH_PORT}
       - ELASTICSEARCH_USERNAME=kibana_system
       - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
-    mem_limit: ${MEM_LIMIT}
+#    mem_limit: ${MEM_LIMIT}
     healthcheck:
       test:
         [

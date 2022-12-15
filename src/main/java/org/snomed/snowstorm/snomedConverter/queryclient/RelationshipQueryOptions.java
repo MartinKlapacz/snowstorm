@@ -1,4 +1,4 @@
-package org.snomed.snowstorm.queryclient;
+package org.snomed.snowstorm.snomedConverter.queryclient;
 
 import lombok.*;
 

@@ -22,6 +22,8 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.jms.annotation.EnableJms;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.snomed.snowstorm.snomedConverter.converterPipeline.TokenMatchingMatrix;
+import org.snomed.snowstorm.snomedConverter.converterPipeline.InputTokenizer;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -40,7 +42,7 @@ public class SnowstormApplication extends Config implements ApplicationRunner {
 
 	@Autowired
 	private ImportService importService;
-	
+
 	@Autowired
 	private ReferenceSetMemberService referenceSetMemberService;
 
@@ -53,6 +55,8 @@ public class SnowstormApplication extends Config implements ApplicationRunner {
 	@Autowired
 	private CodeSystemVersionService codeSystemVersionService;
 
+	@Autowired
+	TokenMatchingMatrix tokenMatchingMatrix;
 	private static final Logger logger = LoggerFactory.getLogger(SnowstormApplication.class);
 
 	public static void main(String[] args) {
@@ -112,6 +116,8 @@ public class SnowstormApplication extends Config implements ApplicationRunner {
 				Thread.sleep(5_000);// Allow graceful shutdown
 				System.exit(0);
 			}
+			List<String> tokenList = InputTokenizer.tokenize("Patient Bacterial pneumonia");
+			tokenMatchingMatrix.generateLexicon(tokenList);
 		} catch (Exception e) {
 			// Logging and rethrowing because Spring does not seem to log this
 			logger.error(e.getMessage(), e);

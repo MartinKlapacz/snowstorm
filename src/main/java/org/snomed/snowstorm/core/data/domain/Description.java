@@ -462,7 +462,7 @@ public class Description extends SnomedComponent<Description> implements SnomedC
 		}
 		return false;
 	}
-	
+
 	/**
 	 * @param acceptability one of Concept.PREFERRED, Concept.ACCEPTABLE or null for either
 	 * @return true if the description has that acceptability in ANY langrefset
@@ -486,7 +486,7 @@ public class Description extends SnomedComponent<Description> implements SnomedC
 		// Is the language refset specified in the dialect?
 		if (dialect.getLanguageReferenceSet() != null) {
 			return hasAcceptability(acceptability, dialect.getLanguageReferenceSet().toString());
-		} 
+		}
 		// Only language code given
 		return active && languageCode.equals(dialect.getLanguageCode());
 	}
