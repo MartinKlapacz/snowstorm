@@ -13,7 +13,6 @@ import org.elasticsearch.client.RestClientBuilder;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.snomed.snowstorm.config.aws.AWSRequestSigningApacheInterceptor;
 import org.snomed.snowstorm.config.elasticsearch.DateToLongConverter;
 import org.snomed.snowstorm.config.elasticsearch.IndexConfig;
 import org.snomed.snowstorm.config.elasticsearch.LongToDateConverter;
@@ -81,20 +80,8 @@ public class ElasticsearchConfig {
 			restClientBuilder.setHttpClientConfigCallback(httpClientBuilder -> httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider));
 		}
 
-		if (awsRequestSigning != null && awsRequestSigning) {
-			restClientBuilder.setHttpClientConfigCallback(httpClientBuilder -> httpClientBuilder.addInterceptorLast(awsInterceptor("es")));
-		}
+
 		return () -> new ESRestHighLevelClient(restClientBuilder);
-	}
-
-	private AWSRequestSigningApacheInterceptor awsInterceptor(String serviceName) {
-		AWS4Signer signer = new AWS4Signer();
-		DefaultAwsRegionProviderChain regionProviderChain = new DefaultAwsRegionProviderChain();
-		DefaultAWSCredentialsProviderChain credentialsProvider = new DefaultAWSCredentialsProviderChain();
-		signer.setServiceName(serviceName);
-		signer.setRegionName(regionProviderChain.getRegion());
-
-		return new AWSRequestSigningApacheInterceptor(serviceName, signer, credentialsProvider);
 	}
 
 	private static HttpHost[] getHttpHosts(String[] hosts) {
