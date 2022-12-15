@@ -31,7 +31,7 @@ public class TokenMatchingMatrix {
         Map<String, Set<DIdContainer>> tokenToDescriptionIdsMap = new HashMap<>();
         // for each token get the descriptionIds/wordCounts of the descriptions that contain the token
         for (String token : tokens) {
-            Set<DIdContainer> dIdContainerSet = augmentedLexiconService.getDIDsForWordCriteria(token);
+            Set<DIdContainer> dIdContainerSet = augmentedLexiconService.getDIDsForWord(token);
             tokenToDescriptionIdsMap.put(token, dIdContainerSet);
             cells.put(List.of(token), dIdContainerSet);
         }
@@ -51,7 +51,7 @@ public class TokenMatchingMatrix {
                         .collect(Collectors.toList());
 
                 // compute their intersection
-                Set<DIdContainer> intersectedDIdAndSizeSet = dIdAndSizeSetsToIntersect.get(0);
+                Set<DIdContainer> intersectedDIdAndSizeSet = new HashSet<>(dIdAndSizeSetsToIntersect.get(0));
                 dIdAndSizeSetsToIntersect.stream().skip(1).forEach(intersectedDIdAndSizeSet::retainAll);
 
 
@@ -69,11 +69,9 @@ public class TokenMatchingMatrix {
         Set<DIdContainer> topDIdContainer = cells.keySet().stream()
                 .map(cells::get)
                 .flatMap(Set::stream)
-                .filter(dIdContainer -> dIdContainer.getScore() >= 0.8)
-                .collect(Collectors.toSet());
-
-
-
+                .filter(dIdContainer -> dIdContainer.getScore() >= 0.5)
+                .sorted((o1, o2) -> Double.compare(o1.getScore(), o2.getScore()))
+                .collect(Collectors.toCollection(LinkedHashSet::new));
 
         for (List<String> key : cells.keySet()) {
             Optional<DIdContainer> maxOptional = cells.get(key).stream().max(DIdContainer.COMPARATOR);

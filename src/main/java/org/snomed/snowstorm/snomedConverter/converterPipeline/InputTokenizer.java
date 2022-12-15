@@ -18,6 +18,7 @@ public class InputTokenizer {
     public static List<String> tokenize(String input){
         return Arrays.stream(input.split(" "))
                 .filter(word -> !wordsToIgnore.contains(word))
+                .map(String::toLowerCase)
                 .collect(Collectors.toList());
     }
 }

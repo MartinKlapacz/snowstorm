@@ -21,13 +21,13 @@ import java.util.stream.Collectors;
 public class AugmentedLexiconService {
 
     private static final String DESCRIPTION_INDEX = "description";
-    private static final String FIELD_NAME = "term";
+    private static final String FIELD_NAME = "termFolded";
     @Autowired
     DescriptionRepository descriptionRepository;
     @Autowired
     ElasticsearchOperations elasticsearchOperations;
 
-    public Set<DIdContainer> getDIDsForWordCriteria(String token) {
+    public Set<DIdContainer> getDIDsForWord(String token) {
         Query containsTokenQuery = new NativeSearchQueryBuilder()
                 .withFilter(QueryBuilders.wildcardQuery(FIELD_NAME, "* " + token + " *"))
                 .build();
