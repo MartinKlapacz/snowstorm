@@ -13,7 +13,7 @@ import org.snomed.snowstorm.fhir.services.FHIROperationException;
 import ca.uhn.fhir.rest.param.*;
 
 public class SearchFilter {
-	
+
 	String id;
 	String code;
 	TokenParam context;
@@ -31,7 +31,7 @@ public class SearchFilter {
 	StringParam title;
 	String url;
 	String version;
-	
+
 	public SearchFilter withId(String id) throws FHIROperationException {
 		if (id != null && !id.startsWith ("ValueSet/")) {
 			id = "ValueSet/" + id;
@@ -170,109 +170,109 @@ public class SearchFilter {
 		this.version = version;
 		return this;
 	}
-	
+
 	public boolean apply(ValueSet vs, QueryService queryService, FHIRHelper fhirHelper) {
-		
+
 		if (getId() != null && !getId().equals(vs.getId())) {
 			return false;
 		}
-		
+
 		if (getContext() != null && !fhirHelper.hasUsageContext(vs, getContext())) {
 			return false;
 		}
-		
+
 		if (!fhirHelper.stringMatches(vs.getDescription(), getDescription()))  {
 			return false;
 		}
-		
+
 		if (getIdentifier() != null && !fhirHelper.hasIdentifier(vs, getIdentifier())) {
 			return false;
 		}
-		
+
 		if (getJurisdiction() != null && !fhirHelper.hasJurisdiction(vs, getJurisdiction())) {
 			return false;
 		}
-		
+
 		if (!fhirHelper.stringMatches(vs.getName(), getName())) {
 			return false;
 		}
-		
+
 		if (!fhirHelper.stringMatches(vs.getPublisher(), getPublisher())) {
 			return false;
 		}
-		
+
 		if (!fhirHelper.enumerationMatches (vs.getStatus(), getStatus())) {
 			return false;
 		}
-		
+
 		if (!fhirHelper.stringMatches(vs.getTitle(), getTitle())) {
 			return false;
 		}
-		
+
 		if (getUrl() != null && !getUrl().equals(vs.getUrl())) {
 			return false;
 		}
-		
+
 		if (getVersion() != null && !getVersion().equals(vs.getVersion())) {
 			return false;
 		}
-			
+
 		return true;
 	}
-	
+
 	public boolean apply(StructureDefinition sd, FHIRHelper fhirHelper) {
-		throw new NotImplementedException();
+		throw new NotImplementedException("");
 	}
-	
+
 	public boolean apply(CodeSystem cs, FHIRHelper fhirHelper) {
 		if (getId() != null && !getId().equals(cs.getId())) {
 			return false;
 		}
-		
+
 		if (getContext() != null && !fhirHelper.hasUsageContext(cs, getContext())) {
 			return false;
 		}
-		
+
 		if (!fhirHelper.stringMatches(cs.getDescription(), getDescription()))  {
 			return false;
 		}
-		
+
 		if (getIdentifier() != null && !fhirHelper.hasIdentifier(cs, getIdentifier())) {
 			return false;
 		}
-		
+
 		if (getJurisdiction() != null && !fhirHelper.hasJurisdiction(cs, getJurisdiction())) {
 			return false;
 		}
-		
+
 		if (!fhirHelper.stringMatches(cs.getName(), getName())) {
 			return false;
 		}
-		
+
 		if (!fhirHelper.stringMatches(cs.getPublisher(), getPublisher())) {
 			return false;
 		}
-		
+
 		if (!fhirHelper.enumerationMatches (cs.getStatus(), getStatus())) {
 			return false;
 		}
-		
+
 		if (!fhirHelper.stringMatches(cs.getTitle(), getTitle())) {
 			return false;
 		}
-		
+
 		if (!fhirHelper.objectMatches(cs.getDate(), getDate())) {
 			return false;
 		}
-		
+
 		if (getUrl() != null && !getUrl().equals(cs.getUrl())) {
 			return false;
 		}
-		
+
 		if (getVersion() != null && !getVersion().equals(cs.getVersion())) {
 			return false;
 		}
-			
+
 		return true;
 	}
 

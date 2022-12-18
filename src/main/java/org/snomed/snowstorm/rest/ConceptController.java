@@ -14,6 +14,7 @@ import org.ihtsdo.drools.response.Severity;
 import org.snomed.snowstorm.config.Config;
 import org.snomed.snowstorm.core.data.domain.*;
 import org.snomed.snowstorm.core.data.domain.expression.Expression;
+import org.snomed.snowstorm.core.data.repositories.ConceptRepository;
 import org.snomed.snowstorm.core.data.services.*;
 import org.snomed.snowstorm.core.data.services.pojo.*;
 import org.snomed.snowstorm.core.pojo.BranchTimepoint;
@@ -42,6 +43,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.Assert;
 import org.springframework.web.bind.annotation.*;
 
+import javax.swing.text.html.Option;
 import javax.validation.Valid;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -94,6 +96,8 @@ public class ConceptController {
 
 	@Value("${snowstorm.rest-api.allowUnlimitedConceptPagination:false}")
 	private boolean allowUnlimitedConceptPagination;
+	@Autowired
+	private ConceptRepository conceptRepository;
 
 	@GetMapping(value = "/{branch}/concepts", produces = {"application/json", "text/csv"})
 	public ItemsPage<?> findConcepts(
@@ -135,7 +139,7 @@ public class ConceptController {
 			@RequestParam(required = false) String statedEcl,
 			@RequestParam(required = false) Set<String> conceptIds,
 			@RequestParam(required = false) boolean returnIdOnly,
-			
+
 			@RequestParam(required = false, defaultValue = "0") int offset,
 			@RequestParam(required = false, defaultValue = "50") int limit,
 			@RequestParam(required = false) String searchAfter,
@@ -197,16 +201,23 @@ public class ConceptController {
 	}
 
 	@GetMapping(value = "/{branch}/concepts/{conceptId}", produces = {"application/json", "text/csv"})
-	public ConceptMini findConcept(
+	public ConceptMini getConcept(
 			@PathVariable String branch,
 			@PathVariable String conceptId,
 			@RequestHeader(value = "Accept-Language", defaultValue = Config.DEFAULT_ACCEPT_LANG_HEADER) String acceptLanguageHeader) {
 
+		Optional<ConceptMini> conceptMiniOptional = findConcept(branch, conceptId, acceptLanguageHeader);
+		if (conceptMiniOptional.isPresent()){
+			return conceptMiniOptional.get();
+		} else {
+			throw new NotFoundException("Concept not found");
+		}
+	}
+
+	public Optional<ConceptMini> findConcept(String branch, String conceptId, String acceptLanguageHeader){
 		ResultMapPage<String, ConceptMini> conceptMinis = conceptService.findConceptMinis(BranchPathUriUtil.decodePath(branch), Collections.singleton(conceptId),
 				ControllerHelper.parseAcceptLanguageHeaderWithDefaultFallback(acceptLanguageHeader));
-
-		ConceptMini concept = conceptMinis.getTotalElements() > 0 ? conceptMinis.getResultsMap().values().iterator().next() : null;
-		return ControllerHelper.throwIfNotFound("Concept", concept);
+		return Optional.ofNullable(conceptMinis.getResultsMap().values().iterator().next());
 	}
 
 	@PostMapping(value = "/{branch}/concepts/search", produces = {"application/json", "text/csv"})
@@ -568,7 +579,7 @@ public class ConceptController {
 
 		return expressionService.getConceptAuthoringForm(conceptId, ControllerHelper.parseAcceptLanguageHeaderWithDefaultFallback(acceptLanguageHeader), BranchPathUriUtil.decodePath(branch));
 	}
-	
+
 	@GetMapping(value = "/{branch}/concepts/{conceptId}/normal-form")
 	public ExpressionStringPojo getConceptNormalForm(
 			@PathVariable String branch,
@@ -582,7 +593,7 @@ public class ConceptController {
 
 		return new ExpressionStringPojo(expression.toString(includeTerms));
 	}
-	
+
 	@PostMapping(value = "/{branch}/concepts/donate")
 	@PreAuthorize("hasPermission('AUTHOR', #branch)")
 	@JsonView(value = View.Component.class)
