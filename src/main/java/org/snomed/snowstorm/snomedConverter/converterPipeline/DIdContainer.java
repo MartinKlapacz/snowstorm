@@ -9,7 +9,13 @@ import java.util.Comparator;
 @Getter
 @ToString
 public class DIdContainer {
-    public static final Comparator<DIdContainer> COMPARATOR = (o1, o2) -> o1.descriptionId.compareTo(o2.getDescriptionId());
+    public static final Comparator<DIdContainer> COMPARATOR = (o1, o2) -> {
+        int res = Double.compare(o1.getScore(), o2.getScore());
+        if (res == 0){
+            return Integer.compare(o1.descriptionLength, o2.descriptionLength);
+        }
+        return res;
+    };
     private final String descriptionId;
     private final int descriptionLength;
     private double score;

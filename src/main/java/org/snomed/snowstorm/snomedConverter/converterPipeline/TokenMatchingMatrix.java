@@ -1,11 +1,7 @@
 package org.snomed.snowstorm.snomedConverter.converterPipeline;
 
-import org.snomed.snowstorm.core.data.domain.Concept;
-import org.snomed.snowstorm.core.data.domain.Description;
 import org.snomed.snowstorm.core.data.repositories.ConceptRepository;
-import org.snomed.snowstorm.core.data.repositories.DescriptionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -15,17 +11,11 @@ import java.util.stream.IntStream;
 @Service
 public class TokenMatchingMatrix {
     private final Map<List<String>, Set<DIdContainer>> cells = new HashMap<>();
-
-    @Value("${converter.minThreshold: 0.05}")
-    private double MIN_THRESHOLD;
-
     @Autowired
     AugmentedLexiconService augmentedLexiconService;
 
     @Autowired
     ConceptRepository conceptRepository;
-    @Autowired
-    private DescriptionRepository descriptionRepository;
 
     public void generateLexicon(List<String> tokens) {
         Map<String, Set<DIdContainer>> tokenToDescriptionIdsMap = new HashMap<>();
@@ -65,31 +55,19 @@ public class TokenMatchingMatrix {
                 cells.put(tokenSubsequence, intersectedCIDsWithScores);
             }
         }
+    }
 
-        Set<DIdContainer> topDIdContainer = cells.keySet().stream()
+    public List<DIdContainer> getTopMatchingDescriptionIds(double threshold) {
+        return cells.keySet().stream()
                 .map(cells::get)
                 .flatMap(Set::stream)
-                .filter(dIdContainer -> dIdContainer.getScore() >= 0.5)
-                .sorted((o1, o2) -> Double.compare(o1.getScore(), o2.getScore()))
-                .collect(Collectors.toCollection(LinkedHashSet::new));
+                .filter(dIdContainer -> dIdContainer.getScore() >= threshold)
+                .sorted(DIdContainer.COMPARATOR.reversed())
+                .collect(Collectors.toList());
+    }
 
-        for (List<String> key : cells.keySet()) {
-            Optional<DIdContainer> maxOptional = cells.get(key).stream().max(DIdContainer.COMPARATOR);
-            if (maxOptional.isPresent()) {
-                DIdContainer maxDIdContainer = maxOptional.get();
-                if (maxDIdContainer.getScore() < MIN_THRESHOLD){
-                    continue;
-                }
-                System.out.println(maxDIdContainer.getScore());
-                Description description = descriptionRepository.findDescriptionByDescriptionId(maxDIdContainer.getDescriptionId())
-                        .stream().findFirst().orElseThrow();
-                System.out.println(description.getTerm());
-                Concept concept = conceptRepository.findConceptByConceptId(description.getConceptId()).orElseThrow();
-                System.out.println(concept);
-            } else {
-
-            }
-        }
+    public void clearMatrix(){
+        cells.clear();
     }
 
 }
