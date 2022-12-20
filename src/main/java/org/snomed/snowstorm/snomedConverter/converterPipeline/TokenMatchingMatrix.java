@@ -1,6 +1,8 @@
 package org.snomed.snowstorm.snomedConverter.converterPipeline;
 
+import lombok.Getter;
 import org.snomed.snowstorm.core.data.repositories.ConceptRepository;
+import org.snomed.snowstorm.rest.DescriptionController;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -11,19 +13,25 @@ import java.util.stream.IntStream;
 @Service
 public class TokenMatchingMatrix {
     private final Map<List<String>, Set<DIdContainer>> cells = new HashMap<>();
+
+    @Getter
+    private List<DIdContainer> topMatchingDescriptions = new ArrayList<>();
     @Autowired
     AugmentedLexiconService augmentedLexiconService;
 
     @Autowired
     ConceptRepository conceptRepository;
 
+    @Autowired
+    DescriptionController descriptionController;
+
     public void generateLexicon(List<String> tokens) {
         Map<String, Set<DIdContainer>> tokenToDescriptionIdsMap = new HashMap<>();
         // for each token get the descriptionIds/wordCounts of the descriptions that contain the token
         for (String token : tokens) {
-            Set<DIdContainer> dIdContainerSet = augmentedLexiconService.getDIDsForWord(token);
-            tokenToDescriptionIdsMap.put(token, dIdContainerSet);
-            cells.put(List.of(token), dIdContainerSet);
+            Set<DIdContainer> conceptSet = augmentedLexiconService.getConceptsContainingToken(token);
+            tokenToDescriptionIdsMap.put(token, conceptSet);
+            cells.put(List.of(token), conceptSet);
         }
 
 
@@ -57,8 +65,8 @@ public class TokenMatchingMatrix {
         }
     }
 
-    public List<DIdContainer> getTopMatchingDescriptionIds(double threshold) {
-        return cells.keySet().stream()
+    public void collectTopMatchingDescriptionIds(double threshold) {
+        topMatchingDescriptions = cells.keySet().stream()
                 .map(cells::get)
                 .flatMap(Set::stream)
                 .filter(dIdContainer -> dIdContainer.getScore() >= threshold)
@@ -68,6 +76,7 @@ public class TokenMatchingMatrix {
 
     public void clearMatrix(){
         cells.clear();
+        topMatchingDescriptions.clear();
     }
 
 }

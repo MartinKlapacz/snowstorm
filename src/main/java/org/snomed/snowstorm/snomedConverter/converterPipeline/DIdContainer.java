@@ -12,12 +12,11 @@ public class DIdContainer {
     public static final Comparator<DIdContainer> COMPARATOR = (o1, o2) -> {
         int res = Double.compare(o1.getScore(), o2.getScore());
         if (res == 0){
-            return Integer.compare(o1.descriptionLength, o2.descriptionLength);
+            return Integer.compare(o1.term.length(), o2.term.length());
         }
         return res;
     };
     private final String descriptionId;
-    private final int descriptionLength;
     private double score;
 
     // for debugging
@@ -25,12 +24,11 @@ public class DIdContainer {
 
     public DIdContainer(Description description) {
         this.descriptionId = description.getDescriptionId();
-        this.descriptionLength = description.getTerm().length();
         this.term = description.getTerm();
     }
 
     public void computeScore(int tokenLength) {
-        score =  tokenLength * 1.0 / descriptionLength;
+        score =  tokenLength * 1.0 / term.length();
     }
 
     @Override

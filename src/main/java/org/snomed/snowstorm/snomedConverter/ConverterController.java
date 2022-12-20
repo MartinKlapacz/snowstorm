@@ -8,7 +8,7 @@ import org.snomed.snowstorm.core.data.repositories.DescriptionRepository;
 import org.snomed.snowstorm.snomedConverter.converterPipeline.DIdContainer;
 import org.snomed.snowstorm.snomedConverter.converterPipeline.InputTokenizer;
 import org.snomed.snowstorm.snomedConverter.converterPipeline.TokenMatchingMatrix;
-import org.snomed.snowstorm.snomedConverter.queryclient.QueryClient;
+import org.snomed.snowstorm.snomedConverter.queryclient.SnowstormEndpointsClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,11 +28,11 @@ public class ConverterController {
     TokenMatchingMatrix tokenMatchingMatrix;
 
     @Autowired
-    QueryClient queryClient;
+    SnowstormEndpointsClient snowstormEndpointsClient;
     @Autowired
-    private DescriptionRepository descriptionRepository;
+    DescriptionRepository descriptionRepository;
     @Autowired
-    private ConceptRepository conceptRepository;
+    ConceptRepository conceptRepository;
 
     @GetMapping(value = "/{input}")
     public String convert(@PathVariable String input) {
@@ -40,8 +40,9 @@ public class ConverterController {
 
         tokenMatchingMatrix.clearMatrix();
         tokenMatchingMatrix.generateLexicon(tokens);
-        List<DIdContainer> topMatches = tokenMatchingMatrix.getTopMatchingDescriptionIds(0.5);
+        tokenMatchingMatrix.collectTopMatchingDescriptionIds(0.5);
 
+        List<DIdContainer> topMatches = tokenMatchingMatrix.getTopMatchingDescriptions();
         List<Concept> matchingConcepts = topMatches.stream().map(DIdContainer::getDescriptionId)
                 .map(descriptionRepository::findDescriptionByDescriptionId)
                 .flatMap(Collection::stream)

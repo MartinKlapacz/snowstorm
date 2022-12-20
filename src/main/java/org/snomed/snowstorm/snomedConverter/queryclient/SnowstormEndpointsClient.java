@@ -5,29 +5,30 @@ import org.snomed.snowstorm.config.Config;
 import org.snomed.snowstorm.core.data.domain.ConceptMini;
 import org.snomed.snowstorm.core.data.domain.Description;
 import org.snomed.snowstorm.core.data.domain.Relationship;
-import org.snomed.snowstorm.core.data.services.ConceptService;
+import org.snomed.snowstorm.core.data.services.DescriptionService;
 import org.snomed.snowstorm.core.data.services.RelationshipService;
 import org.snomed.snowstorm.core.data.services.ServiceException;
 import org.snomed.snowstorm.rest.ConceptController;
 import org.snomed.snowstorm.rest.DescriptionController;
+import org.snomed.snowstorm.rest.pojo.BrowserDescriptionSearchResult;
 import org.snomed.snowstorm.rest.pojo.InboundRelationshipsResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
-public class QueryClient {
+public class SnowstormEndpointsClient {
 
-
-    private final int OFFSET_DEFAULT = 0;
-    private final int LIMIT_DEFAULT = 50;
 
     private final String BRANCH = "MAIN";
 
-    @Autowired
-    private ConceptService conceptService;
+    private final int OFF_SET = 0;
+    private final int LIMIT = 1000;
+
+    private final String ACCEPT_LANGUAGE_HEADER = "en";
 
     @Autowired
     private ConceptController conceptController;
@@ -45,6 +46,18 @@ public class QueryClient {
     public Collection<ConceptMini> findConceptParents(String conceptId) {
         return conceptController.findConceptParents(BRANCH, conceptId, Relationship.CharacteristicType.inferred, false,
                 Config.DEFAULT_ACCEPT_LANG_HEADER);
+    }
+
+    public Set<ConceptMini> browserDescriptionSearch(String textInput){
+        Page<BrowserDescriptionSearchResult> browserDescriptionSearchResults = descriptionController.findBrowserDescriptions(
+                BRANCH, textInput, true, null,
+                null, null, null, null, null, null,
+                null, true, null, true,
+                DescriptionService.SearchMode.STANDARD, OFF_SET, LIMIT, ACCEPT_LANGUAGE_HEADER);
+
+        return browserDescriptionSearchResults.getContent().stream()
+                .map(BrowserDescriptionSearchResult::getConcept)
+                .collect(Collectors.toSet());
     }
 
     public Collection<ConceptMini> findConceptChildren(String conceptId){
