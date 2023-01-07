@@ -642,7 +642,7 @@ public class ConceptService extends ComponentService {
 		}
 
 		Map<String, Concept> existingConceptsMap = getExistingConceptsForSave(concepts, commit);
-		
+
 		//Populate source concepts on rebase
 		Map<String, Concept> existingRebaseSourceConceptsMap = null;
 		if (commit.getCommitType().equals(Commit.CommitType.REBASE)) {
@@ -751,7 +751,7 @@ public class ConceptService extends ComponentService {
 		}
 		return existingConceptsMap;
 	}
-	
+
 	private Map<String, Concept> getExistingSourceConceptsForSave(Collection<Concept> concepts, Commit commit) {
 		Map<String, Concept> existingSourceConceptsMap = new HashMap<>();
 		final List<String> conceptIds = concepts.stream().map(Concept::getConceptId).filter(Objects::nonNull).collect(Collectors.toList());
@@ -808,7 +808,7 @@ public class ConceptService extends ComponentService {
 
 	public void addClauses(Set<String> conceptIds, Boolean active, BoolQueryBuilder conceptQuery) {
 		conceptQuery.must(termsQuery(Concept.Fields.CONCEPT_ID, conceptIds));
-		
+
 		if (active != null) {
 			conceptQuery.must(termsQuery(SnomedComponent.Fields.ACTIVE, active));
 		}
@@ -960,4 +960,16 @@ public class ConceptService extends ComponentService {
 		concepts.add(new ConceptMini(conceptCreated, languageDialects));
 		return concepts;
 	}
+
+	public List<String> findConceptsByDescriptionIds(List<String> descriptionIds) {
+		final BranchCriteria branchCriteria = versionControlHelper.getBranchCriteria("MAIN");
+		BoolQueryBuilder query = boolQuery().must(branchCriteria.getEntityBranchCriteria(Description.class))
+				.must(termsQuery("descriptionId", descriptionIds));
+		return elasticsearchTemplate.search(
+						new NativeSearchQueryBuilder().withQuery(query).build(), Description.class)
+				.get()
+				.map(SearchHit::getContent)
+				.map(Description::getConceptId).collect(Collectors.toList());
+	}
+
 }

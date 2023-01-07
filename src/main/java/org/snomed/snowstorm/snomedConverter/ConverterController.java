@@ -1,10 +1,9 @@
 package org.snomed.snowstorm.snomedConverter;
 
 import com.google.gson.Gson;
-import org.snomed.snowstorm.core.data.domain.Concept;
-import org.snomed.snowstorm.core.data.domain.Description;
 import org.snomed.snowstorm.core.data.repositories.ConceptRepository;
 import org.snomed.snowstorm.core.data.repositories.DescriptionRepository;
+import org.snomed.snowstorm.core.data.services.ConceptService;
 import org.snomed.snowstorm.snomedConverter.converterPipeline.DescriptionMatch;
 import org.snomed.snowstorm.snomedConverter.converterPipeline.InputTokenizer;
 import org.snomed.snowstorm.snomedConverter.converterPipeline.TokenMatchingMatrix;
@@ -16,9 +15,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @RestController
@@ -35,7 +32,10 @@ public class ConverterController {
     @Autowired
     ConceptRepository conceptRepository;
 
-    @Value("${avelios.converter.threshold:0.8}")
+    @Autowired
+    ConceptService conceptService;
+
+    @Value("${avelios.converter.threshold:0.5}")
     double threshold;
 
     @GetMapping(value = "/{input}")
@@ -47,15 +47,14 @@ public class ConverterController {
         tokenMatchingMatrix.filterTopMatches(threshold);
         List<DescriptionMatch> topMatches = tokenMatchingMatrix.getTopScoredDescriptions();
 
-        List<Concept> matchingConcepts = topMatches.stream().map(DescriptionMatch::getDescriptionId)
-                .map(descriptionRepository::findDescriptionByDescriptionId)
-                .flatMap(Collection::stream)
-                .map(Description::getConceptId)
-                .map(conceptRepository::findConceptByConceptId)
-                .filter(Optional::isPresent)
-                .map(Optional::get)
+        List<String> matchingDescriptionIds = topMatches.stream()
+                .map(DescriptionMatch::getDescriptionId)
                 .collect(Collectors.toList());
 
-        return new Gson().toJson(matchingConcepts);
+        List<String> conceptIds = conceptService.findConceptsByDescriptionIds(matchingDescriptionIds);
+
+        // todo: use conceptIds ...
+
+        return new Gson().toJson(matchingDescriptionIds);
     }
 }
