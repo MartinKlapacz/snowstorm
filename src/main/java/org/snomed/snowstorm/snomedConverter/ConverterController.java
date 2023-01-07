@@ -5,11 +5,12 @@ import org.snomed.snowstorm.core.data.domain.Concept;
 import org.snomed.snowstorm.core.data.domain.Description;
 import org.snomed.snowstorm.core.data.repositories.ConceptRepository;
 import org.snomed.snowstorm.core.data.repositories.DescriptionRepository;
-import org.snomed.snowstorm.snomedConverter.converterPipeline.DIdContainer;
+import org.snomed.snowstorm.snomedConverter.converterPipeline.DescriptionMatch;
 import org.snomed.snowstorm.snomedConverter.converterPipeline.InputTokenizer;
 import org.snomed.snowstorm.snomedConverter.converterPipeline.TokenMatchingMatrix;
 import org.snomed.snowstorm.snomedConverter.queryclient.SnowstormEndpointsClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -34,16 +35,19 @@ public class ConverterController {
     @Autowired
     ConceptRepository conceptRepository;
 
+    @Value("${avelios.converter.threshold:0.8}")
+    double threshold;
+
     @GetMapping(value = "/{input}")
     public String convert(@PathVariable String input) {
         List<String> tokens = InputTokenizer.tokenize(input);
 
         tokenMatchingMatrix.clearMatrix();
         tokenMatchingMatrix.generateLexicon(tokens);
-        tokenMatchingMatrix.collectTopMatchingDescriptionIds(0.5);
+        tokenMatchingMatrix.filterTopMatches(threshold);
+        List<DescriptionMatch> topMatches = tokenMatchingMatrix.getTopScoredDescriptions();
 
-        List<DIdContainer> topMatches = tokenMatchingMatrix.getTopMatchingDescriptions();
-        List<Concept> matchingConcepts = topMatches.stream().map(DIdContainer::getDescriptionId)
+        List<Concept> matchingConcepts = topMatches.stream().map(DescriptionMatch::getDescriptionId)
                 .map(descriptionRepository::findDescriptionByDescriptionId)
                 .flatMap(Collection::stream)
                 .map(Description::getConceptId)

@@ -13,7 +13,7 @@ import java.util.stream.IntStream;
 
 @Service
 public class TokenMatchingMatrix {
-    private final Map<List<String>, Set<DIdContainer>> cells = new ConcurrentHashMap<>();
+    private final Map<List<String>, Set<DescriptionMatch>> cells = new ConcurrentHashMap<>();
     @Autowired
     AugmentedLexiconService augmentedLexiconService;
     @Autowired
@@ -22,10 +22,11 @@ public class TokenMatchingMatrix {
     DescriptionController descriptionController;
     ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
     @Getter
-    private List<DIdContainer> topMatchingDescriptions = new ArrayList<>();
+    private List<DescriptionMatch> topScoredDescriptions = new ArrayList<>();
+
 
     public void generateLexicon(List<String> tokens) {
-        Map<String, Set<DIdContainer>> tokenToDescriptionIdsMap = new ConcurrentHashMap<>();
+        Map<String, Set<DescriptionMatch>> tokenToDescriptionMatches = new ConcurrentHashMap<>();
 
         int numOfCells = tokens.size() + tokens.size() * (tokens.size() - 1) / 2;
         List<Future<?>> futureList = new ArrayList<>(numOfCells);
@@ -33,9 +34,9 @@ public class TokenMatchingMatrix {
         // for each token get the descriptionIds/wordCounts of the descriptions that contain the token
         for (String token : tokens) {
             Future<?> future = executorService.submit(() -> {
-                Set<DIdContainer> conceptSet = augmentedLexiconService.getConceptsContainingToken(token);
-                tokenToDescriptionIdsMap.put(token, conceptSet);
-                cells.put(List.of(token), conceptSet);
+                Set<DescriptionMatch> descriptionMatchSet = augmentedLexiconService.getDescriptionsContainingSingleToken(token);
+                tokenToDescriptionMatches.put(token, descriptionMatchSet);
+                cells.put(List.of(token), descriptionMatchSet);
             });
             futureList.add(future);
         }
@@ -54,19 +55,18 @@ public class TokenMatchingMatrix {
                             .collect(Collectors.toList());
 
                     // get description Id set for each token in token subsequence
-                    List<Set<DIdContainer>> dIdAndSizeSetsToIntersect = tokenSubsequence.stream()
-                            .map(tokenToDescriptionIdsMap::get)
+                    List<Set<DescriptionMatch>> descriptionMatchSetsToIntersect = tokenSubsequence.stream()
+                            .map(tokenToDescriptionMatches::get)
                             .collect(Collectors.toList());
 
                     // compute their intersection
-                    Set<DIdContainer> intersectedDIdAndSizeSet = new HashSet<>(dIdAndSizeSetsToIntersect.get(0));
-                    dIdAndSizeSetsToIntersect.stream().skip(1).forEach(intersectedDIdAndSizeSet::retainAll);
+                    Set<DescriptionMatch> intersectedDescriptionMatches = new HashSet<>(descriptionMatchSetsToIntersect.get(0));
+                    descriptionMatchSetsToIntersect.stream().skip(1).forEach(intersectedDescriptionMatches::retainAll);
 
 
                     // use the description size to compute the id scores
-                    int tokenSubsequenceLength = String.join(" ", tokenSubsequence).length();
-                    Set<DIdContainer> intersectedCIDsWithScores = intersectedDIdAndSizeSet.stream()
-                            .peek(dIdContainer -> dIdContainer.computeScore(tokenSubsequenceLength))
+                    Set<DescriptionMatch> intersectedCIDsWithScores = intersectedDescriptionMatches.stream()
+                            .peek(descriptionMatch -> descriptionMatch.computeScore(finalJ - finalI + 1))
                             .collect(Collectors.toSet());
 
                     // store matrix cells
@@ -89,18 +89,20 @@ public class TokenMatchingMatrix {
         futureList.clear();
     }
 
-    public void collectTopMatchingDescriptionIds(double threshold) {
-        topMatchingDescriptions = cells.keySet().stream()
+    public void filterTopMatches(double score) {
+        final int maxAmount = 64;
+        topScoredDescriptions = cells.keySet().stream()
                 .map(cells::get)
                 .flatMap(Set::stream)
-                .filter(dIdContainer -> dIdContainer.getScore() >= threshold)
-                .sorted(DIdContainer.COMPARATOR.reversed())
+                .sorted(Comparator.comparingDouble(DescriptionMatch::getScore).reversed())
+                .limit(maxAmount)
+                .filter(did -> did.getScore() > score)
                 .collect(Collectors.toList());
     }
 
     public void clearMatrix(){
         cells.clear();
-        topMatchingDescriptions.clear();
+        topScoredDescriptions.clear();
     }
 
 }
