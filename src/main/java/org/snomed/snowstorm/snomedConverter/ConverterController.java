@@ -4,10 +4,11 @@ import com.google.gson.Gson;
 import org.snomed.snowstorm.core.data.repositories.ConceptRepository;
 import org.snomed.snowstorm.core.data.repositories.DescriptionRepository;
 import org.snomed.snowstorm.core.data.services.ConceptService;
+import org.snomed.snowstorm.rest.ConceptController;
 import org.snomed.snowstorm.snomedConverter.converterPipeline.DescriptionMatch;
 import org.snomed.snowstorm.snomedConverter.converterPipeline.InputTokenizer;
 import org.snomed.snowstorm.snomedConverter.converterPipeline.TokenMatchingMatrix;
-import org.snomed.snowstorm.snomedConverter.queryclient.SnowstormEndpointsClient;
+import org.snomed.snowstorm.snomedConverter.queryclient.SnowstormEndpointsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @RestController
@@ -26,11 +28,13 @@ public class ConverterController {
     TokenMatchingMatrix tokenMatchingMatrix;
 
     @Autowired
-    SnowstormEndpointsClient snowstormEndpointsClient;
+    SnowstormEndpointsService snowstormEndpointsService;
     @Autowired
     DescriptionRepository descriptionRepository;
     @Autowired
     ConceptRepository conceptRepository;
+    @Autowired
+    ConceptController conceptController;
 
     @Autowired
     ConceptService conceptService;
@@ -53,7 +57,8 @@ public class ConverterController {
 
         List<String> conceptIds = conceptService.findConceptsByDescriptionIds(matchingDescriptionIds);
 
-        // todo: use conceptIds ...
+        Set<String> parentIds = snowstormEndpointsService.findConceptParents(conceptIds);
+        Set<String> childrenIds = snowstormEndpointsService.findConceptChildren(conceptIds);
 
         return new Gson().toJson(matchingDescriptionIds);
     }

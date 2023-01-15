@@ -3,6 +3,7 @@ package org.snomed.snowstorm.snomedConverter.queryclient;
 import io.kaicode.rest.util.branchpathrewrite.BranchPathUriUtil;
 import org.snomed.snowstorm.config.Config;
 import org.snomed.snowstorm.core.data.domain.ConceptMini;
+import org.snomed.snowstorm.core.data.domain.ConceptView;
 import org.snomed.snowstorm.core.data.domain.Description;
 import org.snomed.snowstorm.core.data.domain.Relationship;
 import org.snomed.snowstorm.core.data.services.DescriptionService;
@@ -11,23 +12,27 @@ import org.snomed.snowstorm.core.data.services.ServiceException;
 import org.snomed.snowstorm.rest.ConceptController;
 import org.snomed.snowstorm.rest.DescriptionController;
 import org.snomed.snowstorm.rest.pojo.BrowserDescriptionSearchResult;
+import org.snomed.snowstorm.rest.pojo.ConceptSearchRequest;
 import org.snomed.snowstorm.rest.pojo.InboundRelationshipsResult;
+import org.snomed.snowstorm.rest.pojo.ItemsPage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
-public class SnowstormEndpointsClient {
+public class SnowstormEndpointsService {
 
 
+    public static int count = 0;
     private final String BRANCH = "MAIN";
-
     private final int OFF_SET = 0;
     private final int LIMIT = 1000;
-
     private final String ACCEPT_LANGUAGE_HEADER = "en";
 
     @Autowired
@@ -39,16 +44,33 @@ public class SnowstormEndpointsClient {
     @Autowired
     private DescriptionController descriptionController;
 
-    public Optional<ConceptMini> findConcept(String conceptId) {
-        return conceptController.findConcept(BRANCH, conceptId, Config.DEFAULT_ACCEPT_LANG_HEADER);
+    public ConceptView findConcept(String conceptId) {
+        return conceptController.findBrowserConcept(BRANCH, conceptId, Relationship.CharacteristicType.inferred, Config.DEFAULT_ACCEPT_LANG_HEADER);
     }
 
-    public Collection<ConceptMini> findConceptParents(String conceptId) {
-        return conceptController.findConceptParents(BRANCH, conceptId, Relationship.CharacteristicType.inferred, false,
-                Config.DEFAULT_ACCEPT_LANG_HEADER);
+    public Set<String> findConceptChildren(Collection<String> conceptIds) {
+        String findChildrenECL = conceptIds.stream().map(id -> "<!" + id).collect(Collectors.joining(" OR "));
+        return findConceptsByECL(conceptIds, findChildrenECL);
     }
 
-    public Set<ConceptMini> browserDescriptionSearch(String textInput){
+    public Set<String> findConceptParents(Collection<String> conceptIds) {
+        String findParentsECL = conceptIds.stream().map(id -> ">!" + id).collect(Collectors.joining(" OR "));
+        return findConceptsByECL(conceptIds, findParentsECL);
+    }
+
+    private Set<String> findConceptsByECL(Collection<String> conceptIds, String ecl) {
+        ConceptSearchRequest conceptSearchRequest = new ConceptSearchRequest();
+        conceptSearchRequest.setTermActive(true);
+        conceptSearchRequest.setEclFilter(ecl);
+        conceptSearchRequest.setReturnIdOnly(true);
+
+        ItemsPage<?> parentsItemPage = conceptController.search("MAIN", conceptSearchRequest, Config.DEFAULT_ACCEPT_LANG_HEADER, false);
+        return parentsItemPage.getItems().stream()
+                .map(item -> (String) item)
+                .collect(Collectors.toSet());
+    }
+
+    public Set<ConceptMini> browserDescriptionSearch(String textInput) {
         Page<BrowserDescriptionSearchResult> browserDescriptionSearchResults = descriptionController.findBrowserDescriptions(
                 BRANCH, textInput, true, null,
                 null, null, null, null, null, null,
@@ -60,20 +82,20 @@ public class SnowstormEndpointsClient {
                 .collect(Collectors.toSet());
     }
 
-    public Collection<ConceptMini> findConceptChildren(String conceptId){
-        try{
+    public Collection<ConceptMini> findConceptChildren(String conceptId) {
+        try {
             return conceptController.findConceptChildren(BRANCH, conceptId, Relationship.CharacteristicType.inferred,
                     false, Config.DEFAULT_ACCEPT_LANG_HEADER);
         } catch (ServiceException e) {
-            return Collections.emptySet();
+            throw new RuntimeException(e.getMessage());
         }
     }
 
-    public Optional<Relationship> findRelationship(String relationshipId){
+    public Optional<Relationship> findRelationship(String relationshipId) {
         return Optional.ofNullable(relationshipService.findRelationship(BRANCH, relationshipId));
     }
 
-    public List<Relationship> findRelationships(RelationshipQueryOptions options){
+    public List<Relationship> findRelationships(RelationshipQueryOptions options) {
         Page<Relationship> relationshipPage = relationshipService.findRelationships(
                 BRANCH, options.getRelationshipId(),
                 true,
@@ -95,7 +117,7 @@ public class SnowstormEndpointsClient {
         return new InboundRelationshipsResult(inboundRelationships).getInboundRelationships();
     }
 
-    public Description findDescription(String descriptionId){
+    public Description findDescription(String descriptionId) {
         return descriptionController.fetchDescription(BRANCH, descriptionId);
     }
 }

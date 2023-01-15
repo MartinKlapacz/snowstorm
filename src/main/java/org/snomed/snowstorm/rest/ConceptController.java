@@ -96,8 +96,88 @@ public class ConceptController {
 
 	@Value("${snowstorm.rest-api.allowUnlimitedConceptPagination:false}")
 	private boolean allowUnlimitedConceptPagination;
-	@Autowired
-	private ConceptRepository conceptRepository;
+
+	public ItemsPage<?> findConcepts(
+			String branch,
+			Boolean activeFilter,
+			String definitionStatusFilter,
+			Set<Long> module,
+			String term,
+			Boolean termActive,
+			Set<Long> descriptionType,
+			Set<String> language,
+			Set<Long> preferredIn,
+			Set<Long> acceptableIn,
+			Set<Long> preferredOrAcceptableIn,
+			String ecl,
+			Integer effectiveTime,
+			Boolean isNullEffectiveTime,
+			Boolean isPublished,
+			String statedEcl,
+			Set<String> conceptIds,
+			boolean returnIdOnly,
+			int offset,
+			int limit,
+			String searchAfter,
+			String acceptLanguageHeader,
+			boolean validate
+	){
+		branch = BranchPathUriUtil.decodePath(branch);
+
+		// Parameter validation
+		if (ecl != null && statedEcl != null) {
+			throw new IllegalArgumentException("Parameters ecl and statedEcl can not be combined.");
+		}
+
+		if ((ecl != null || statedEcl != null) && activeFilter != null && !activeFilter) {
+			throw new IllegalArgumentException("ECL search can not be used on inactive concepts.");
+		}
+
+		boolean stated = true;
+		if (isNotBlank(ecl)) {
+			if (validate){
+				eclValidator.validate(ecl, branch);
+			}
+			stated = false;
+		} else {
+			ecl = statedEcl;
+		}
+
+		List<LanguageDialect> languageDialects = ControllerHelper.parseAcceptLanguageHeaderWithDefaultFallback(acceptLanguageHeader);
+
+		QueryService.ConceptQueryBuilder queryBuilder = queryService.createQueryBuilder(stated)
+				.activeFilter(activeFilter)
+				.descriptionCriteria(descriptionCriteria -> descriptionCriteria
+						.active(termActive)
+						.term(term)
+						.searchLanguageCodes(language)
+						.type(descriptionType)
+				)
+				.definitionStatusFilter(definitionStatusFilter)
+				.module(module)
+				.ecl(ecl)
+				.effectiveTime(effectiveTime)
+				.isNullEffectiveTime(isNullEffectiveTime)
+				.isReleased(isPublished)
+				.resultLanguageDialects(languageDialects)
+				.conceptIds(conceptIds);
+
+		queryBuilder.getDescriptionCriteria().preferredOrAcceptableValues(preferredOrAcceptableIn, preferredIn, acceptableIn);
+
+		PageRequest pageRequest = getPageRequestWithSort(offset, limit, searchAfter, Sort.sort(Concept.class).by(Concept::getConceptId).descending());
+		if (ecl != null) {
+			pageRequest = getPageRequestWithSort(offset, limit, searchAfter, Sort.sort(QueryConcept.class).by(QueryConcept::getConceptIdL).descending());
+		}
+		if (returnIdOnly) {
+			SearchAfterPage<Long> longsPage = queryService.searchForIds(queryBuilder, branch, pageRequest);
+			SearchAfterPageImpl<String> stringPage = new SearchAfterPageImpl<>(longsPage.stream().map(Object::toString).collect(Collectors.toList()),
+					longsPage.getPageable(), longsPage.getTotalElements(), longsPage.getSearchAfter());
+			return new ItemsPage<>(stringPage);
+		} else {
+			return new ItemsPage<>(queryService.search(queryBuilder, branch, pageRequest));
+		}
+	}
+
 
 	@GetMapping(value = "/{branch}/concepts", produces = {"application/json", "text/csv"})
 	public ItemsPage<?> findConcepts(
@@ -145,59 +225,9 @@ public class ConceptController {
 			@RequestParam(required = false) String searchAfter,
 			@Parameter(description = "Accept-Language header can take the format en-x-900000000000508004 which sets the language reference set to use in the results.")
 			@RequestHeader(value = "Accept-Language", defaultValue = Config.DEFAULT_ACCEPT_LANG_HEADER) String acceptLanguageHeader) {
-
-		branch = BranchPathUriUtil.decodePath(branch);
-
-		// Parameter validation
-		if (ecl != null && statedEcl != null) {
-			throw new IllegalArgumentException("Parameters ecl and statedEcl can not be combined.");
-		}
-
-		if ((ecl != null || statedEcl != null) && activeFilter != null && !activeFilter) {
-			throw new IllegalArgumentException("ECL search can not be used on inactive concepts.");
-		}
-
-		boolean stated = true;
-		if (isNotBlank(ecl)) {
-			eclValidator.validate(ecl, branch);
-			stated = false;
-		} else {
-			ecl = statedEcl;
-		}
-
-		List<LanguageDialect> languageDialects = ControllerHelper.parseAcceptLanguageHeaderWithDefaultFallback(acceptLanguageHeader);
-
-		QueryService.ConceptQueryBuilder queryBuilder = queryService.createQueryBuilder(stated)
-				.activeFilter(activeFilter)
-				.descriptionCriteria(descriptionCriteria -> descriptionCriteria
-						.active(termActive)
-						.term(term)
-						.searchLanguageCodes(language)
-						.type(descriptionType)
-				)
-				.definitionStatusFilter(definitionStatusFilter)
-				.module(module)
-				.ecl(ecl)
-				.effectiveTime(effectiveTime)
-				.isNullEffectiveTime(isNullEffectiveTime)
-				.isReleased(isPublished)
-				.resultLanguageDialects(languageDialects)
-				.conceptIds(conceptIds);
-
-		queryBuilder.getDescriptionCriteria().preferredOrAcceptableValues(preferredOrAcceptableIn, preferredIn, acceptableIn);
-
-		PageRequest pageRequest = getPageRequestWithSort(offset, limit, searchAfter, Sort.sort(Concept.class).by(Concept::getConceptId).descending());
-		if (ecl != null) {
-			pageRequest = getPageRequestWithSort(offset, limit, searchAfter, Sort.sort(QueryConcept.class).by(QueryConcept::getConceptIdL).descending());
-		}
-		if (returnIdOnly) {
-			SearchAfterPage<Long> longsPage = queryService.searchForIds(queryBuilder, branch, pageRequest);
-			SearchAfterPageImpl<String> stringPage = new SearchAfterPageImpl<>(longsPage.stream().map(Object::toString).collect(Collectors.toList()),
-					longsPage.getPageable(), longsPage.getTotalElements(), longsPage.getSearchAfter());
-			return new ItemsPage<>(stringPage);
-		} else {
-			return new ItemsPage<>(queryService.search(queryBuilder, branch, pageRequest));
-		}
+		return findConcepts(branch, activeFilter, definitionStatusFilter, module, term, termActive, descriptionType,
+				language, preferredIn, acceptableIn, preferredOrAcceptableIn, ecl, effectiveTime, isNullEffectiveTime,
+				isPublished, statedEcl, conceptIds, returnIdOnly, offset, limit, searchAfter, acceptLanguageHeader, true);
 	}
 
 	@GetMapping(value = "/{branch}/concepts/{conceptId}", produces = {"application/json", "text/csv"})
@@ -224,8 +254,12 @@ public class ConceptController {
 	public ItemsPage<?> search(
 			@PathVariable String branch,
 			@RequestBody ConceptSearchRequest searchRequest,
-			@RequestHeader(value = "Accept-Language", defaultValue = Config.DEFAULT_ACCEPT_LANG_HEADER) String acceptLanguageHeader) {
+			@RequestHeader(value = "Accept-Language", defaultValue = Config.DEFAULT_ACCEPT_LANG_HEADER) String acceptLanguageHeader
+			) {
+		return search(branch, searchRequest, acceptLanguageHeader, true);
+	}
 
+	public ItemsPage<?> search(String branch, ConceptSearchRequest searchRequest, String acceptLanguageHeader, boolean validate) {
 		return findConcepts(BranchPathUriUtil.decodePath(branch),
 				searchRequest.getActiveFilter(),
 				searchRequest.getDefinitionStatusFilter(),
@@ -247,7 +281,8 @@ public class ConceptController {
 				searchRequest.getOffset(),
 				searchRequest.getLimit(),
 				searchRequest.getSearchAfter(),
-				acceptLanguageHeader);
+				acceptLanguageHeader,
+				validate);
 	}
 
 	@Operation(summary = "Load concepts in the browser format.",

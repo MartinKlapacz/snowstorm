@@ -963,13 +963,36 @@ public class ConceptService extends ComponentService {
 
 	public List<String> findConceptsByDescriptionIds(List<String> descriptionIds) {
 		final BranchCriteria branchCriteria = versionControlHelper.getBranchCriteria("MAIN");
-		BoolQueryBuilder query = boolQuery().must(branchCriteria.getEntityBranchCriteria(Description.class))
-				.must(termsQuery("descriptionId", descriptionIds));
-		return elasticsearchTemplate.search(
-						new NativeSearchQueryBuilder().withQuery(query).build(), Description.class)
+		var query = boolQuery()
+				.must(branchCriteria.getEntityBranchCriteria(Description.class))
+				.must(termsQuery(Description.Fields.DESCRIPTION_ID, descriptionIds));
+		var builder = new NativeSearchQueryBuilder()
+				.withQuery(query)
+				.withFields(Description.Fields.CONCEPT_ID)
+				.build();
+		return elasticsearchTemplate.search(builder, Description.class)
 				.get()
 				.map(SearchHit::getContent)
-				.map(Description::getConceptId).collect(Collectors.toList());
+				.map(Description::getConceptId)
+				.collect(Collectors.toList());
+	}
+
+	public List<String> findConceptsByDescriptionIds(String descriptionId) {
+		final BranchCriteria branchCriteria = versionControlHelper.getBranchCriteria("MAIN");
+		var query = boolQuery()
+				.must(branchCriteria.getEntityBranchCriteria(Description.class))
+				.must(termsQuery(Description.Fields.DESCRIPTION_ID, descriptionId));
+		var builder = new NativeSearchQueryBuilder()
+				.withQuery(query)
+//				.withFields(Description.Fields.CONCEPT_ID)
+				.build();
+		var foo = elasticsearchTemplate.search(builder, Description.class)
+				.get()
+				.map(SearchHit::getContent)
+//				.map(Description::getConceptId)
+				.collect(Collectors.toList());
+		var bar = foo.stream().map(Description::getConceptId).collect(Collectors.toList());
+		return bar;
 	}
 
 }

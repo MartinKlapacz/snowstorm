@@ -17,6 +17,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static org.snomed.snowstorm.core.data.domain.Description.Fields.DESCRIPTION_ID;
+import static org.snomed.snowstorm.core.data.domain.Description.Fields.TERM_FOLDED;
+import static org.snomed.snowstorm.core.data.domain.Description.Fields.TERM;
+
 @Service
 public class AugmentedLexiconService {
 
@@ -29,16 +33,20 @@ public class AugmentedLexiconService {
 
     public Set<DescriptionMatch> getDescriptionsContainingSingleToken(String token) {
         Query containsTokenQuery = new NativeSearchQueryBuilder()
-                .withFilter(QueryBuilders.wildcardQuery(FIELD_NAME, "* " + token + " *"))
+                .withFilter(QueryBuilders.wildcardQuery(TERM_FOLDED, "* " + token + " *"))
+                .withFields(DESCRIPTION_ID, TERM)
                 .build();
         Query startsWithTokenQuery = new NativeSearchQueryBuilder()
-                .withFilter(QueryBuilders.wildcardQuery(FIELD_NAME, token + " *"))
+                .withFilter(QueryBuilders.wildcardQuery(TERM_FOLDED, token + " *"))
+                .withFields(DESCRIPTION_ID, TERM)
                 .build();
         Query endsWithTokenQuery = new NativeSearchQueryBuilder()
-                .withFilter(QueryBuilders.wildcardQuery(FIELD_NAME, "* " + token))
+                .withFilter(QueryBuilders.wildcardQuery(TERM_FOLDED, "* " + token))
+                .withFields(DESCRIPTION_ID, TERM)
                 .build();
         Query directMatchQuery = new NativeSearchQueryBuilder()
-                .withFilter(QueryBuilders.matchQuery(FIELD_NAME, token))
+                .withFilter(QueryBuilders.matchQuery(TERM_FOLDED, token))
+                .withFields(DESCRIPTION_ID, TERM)
                 .build();
         List<Query> queries = List.of(containsTokenQuery, startsWithTokenQuery, endsWithTokenQuery, directMatchQuery);
 
