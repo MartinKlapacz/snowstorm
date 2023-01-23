@@ -65,8 +65,9 @@ public class TokenMatchingMatrix {
 
 
                     // use the description size to compute the id scores
+                    int numOfDistinctMatchingTokens = new HashSet<>(tokens.subList(finalI, finalJ + 1)).size();
                     Set<DescriptionMatch> intersectedCIDsWithScores = intersectedDescriptionMatches.stream()
-                            .peek(descriptionMatch -> descriptionMatch.computeScore(finalJ - finalI + 1))
+                            .peek(descriptionMatch -> descriptionMatch.computeScore(numOfDistinctMatchingTokens))
                             .collect(Collectors.toSet());
 
                     // store matrix cells
