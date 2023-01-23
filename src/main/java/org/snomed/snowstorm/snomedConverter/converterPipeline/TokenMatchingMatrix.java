@@ -14,20 +14,17 @@ import java.util.stream.IntStream;
 @Service
 public class TokenMatchingMatrix {
     private final Map<List<String>, Set<DescriptionMatch>> cells = new ConcurrentHashMap<>();
+
     @Autowired
     AugmentedLexiconService augmentedLexiconService;
-    @Autowired
-    ConceptRepository conceptRepository;
-    @Autowired
-    DescriptionController descriptionController;
+
     ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+
     @Getter
     private List<DescriptionMatch> topScoredDescriptions = new ArrayList<>();
 
 
     public void generateLexicon(List<String> tokens) {
-        Map<String, Set<DescriptionMatch>> tokenToDescriptionMatches = new ConcurrentHashMap<>();
-
         int numOfCells = tokens.size() + tokens.size() * (tokens.size() - 1) / 2;
         List<Future<?>> futureList = new ArrayList<>(numOfCells);
 
@@ -35,7 +32,6 @@ public class TokenMatchingMatrix {
         for (String token : tokens) {
             Future<?> future = executorService.submit(() -> {
                 Set<DescriptionMatch> descriptionMatchSet = augmentedLexiconService.getDescriptionsContainingSingleToken(token);
-                tokenToDescriptionMatches.put(token, descriptionMatchSet);
                 cells.put(List.of(token), descriptionMatchSet);
             });
             futureList.add(future);
@@ -56,7 +52,8 @@ public class TokenMatchingMatrix {
 
                     // get description Id set for each token in token subsequence
                     List<Set<DescriptionMatch>> descriptionMatchSetsToIntersect = tokenSubsequence.stream()
-                            .map(tokenToDescriptionMatches::get)
+                            .map(List::of)
+                            .map(cells::get)
                             .collect(Collectors.toList());
 
                     // compute their intersection

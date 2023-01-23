@@ -59,7 +59,45 @@ public class ConverterController {
 
         Set<String> parentIds = snowstormEndpointsService.findConceptParents(conceptIds);
         Set<String> childrenIds = snowstormEndpointsService.findConceptChildren(conceptIds);
+        Set<String> ancestorIds = snowstormEndpointsService.findConceptAncestors(conceptIds);
+        Set<String> decendantIds = snowstormEndpointsService.findConceptDescendants(conceptIds);
 
         return new Gson().toJson(matchingDescriptionIds);
+    }
+
+    @GetMapping(value = "commonAncestors/{input1}/{input2}")
+    public String convertDouble(@PathVariable String input1, @PathVariable String input2) {
+        List<String> tokens = InputTokenizer.tokenize(input1);
+
+        tokenMatchingMatrix.clearMatrix();
+        tokenMatchingMatrix.generateLexicon(tokens);
+        tokenMatchingMatrix.filterTopMatches(threshold);
+        List<DescriptionMatch> topMatches1 = tokenMatchingMatrix.getTopScoredDescriptions();
+
+        List<String> matchingDescriptionIds1 = topMatches1.stream()
+                .map(DescriptionMatch::getDescriptionId)
+                .collect(Collectors.toList());
+
+        List<String> conceptIds1 = conceptService.findConceptsByDescriptionIds(matchingDescriptionIds1);
+
+
+        tokenMatchingMatrix.clearMatrix();
+        tokenMatchingMatrix.generateLexicon(tokens);
+        tokenMatchingMatrix.filterTopMatches(threshold);
+        List<DescriptionMatch> topMatches2 = tokenMatchingMatrix.getTopScoredDescriptions();
+
+        List<String> matchingDescriptionIds2 = topMatches2.stream()
+                .map(DescriptionMatch::getDescriptionId)
+                .collect(Collectors.toList());
+
+        List<String> conceptIds2 = conceptService.findConceptsByDescriptionIds(matchingDescriptionIds2);
+
+
+        Set<String> ancestorIds = snowstormEndpointsService.findConceptAncestors(conceptIds1);
+        Set<String> ancestorIds2 = snowstormEndpointsService.findConceptAncestors(conceptIds2);
+
+        ancestorIds.retainAll(ancestorIds2);
+
+        return new Gson().toJson(ancestorIds);
     }
 }

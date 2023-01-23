@@ -49,14 +49,26 @@ public class SnowstormEndpointsService {
     }
 
     public Set<String> findConceptChildren(Collection<String> conceptIds) {
-        String findChildrenECL = conceptIds.stream().map(id -> "<!" + id).collect(Collectors.joining(" OR "));
+        String findChildrenECL = conceptIds.stream().map(id -> "<! " + id).collect(Collectors.joining(" OR "));
         return findConceptsByECL(conceptIds, findChildrenECL);
     }
 
     public Set<String> findConceptParents(Collection<String> conceptIds) {
-        String findParentsECL = conceptIds.stream().map(id -> ">!" + id).collect(Collectors.joining(" OR "));
+        String findParentsECL = conceptIds.stream().map(id -> ">! " + id).collect(Collectors.joining(" OR "));
         return findConceptsByECL(conceptIds, findParentsECL);
     }
+
+    public Set<String> findConceptDescendants(Collection<String> conceptIds) {
+        String findParentsECL = conceptIds.stream().map(id -> "< " + id).collect(Collectors.joining(" OR "));
+        return findConceptsByECL(conceptIds, findParentsECL);
+    }
+
+    public Set<String> findConceptAncestors(Collection<String> conceptIds) {
+        String findParentsECL = conceptIds.stream().map(id -> "> " + id).collect(Collectors.joining(" OR "));
+        return findConceptsByECL(conceptIds, findParentsECL);
+    }
+
+
 
     private Set<String> findConceptsByECL(Collection<String> conceptIds, String ecl) {
         ConceptSearchRequest conceptSearchRequest = new ConceptSearchRequest();
