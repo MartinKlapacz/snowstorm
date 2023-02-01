@@ -961,7 +961,7 @@ public class ConceptService extends ComponentService {
 		return concepts;
 	}
 
-	public List<String> findConceptsByDescriptionIds(List<String> descriptionIds) {
+	public Set<String> findConceptsByDescriptionIds(Set<String> descriptionIds) {
 		final BranchCriteria branchCriteria = versionControlHelper.getBranchCriteria("MAIN");
 		var query = boolQuery()
 				.must(branchCriteria.getEntityBranchCriteria(Description.class))
@@ -974,7 +974,7 @@ public class ConceptService extends ComponentService {
 				.get()
 				.map(SearchHit::getContent)
 				.map(Description::getConceptId)
-				.collect(Collectors.toList());
+				.collect(Collectors.toSet());
 	}
 
 	public List<String> findConceptsByDescriptionIds(String descriptionId) {

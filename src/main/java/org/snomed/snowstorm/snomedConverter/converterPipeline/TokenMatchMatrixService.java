@@ -1,9 +1,16 @@
 package org.snomed.snowstorm.snomedConverter.converterPipeline;
 
 import lombok.Getter;
-import org.snomed.snowstorm.core.data.repositories.ConceptRepository;
-import org.snomed.snowstorm.rest.DescriptionController;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.snomed.snowstorm.core.data.domain.Description;
+import org.snomed.snowstorm.core.data.services.ConceptService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.SearchHit;
+import org.springframework.data.elasticsearch.core.SearchHits;
+import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
+import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
+import org.springframework.data.elasticsearch.core.query.Query;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -11,36 +18,43 @@ import java.util.concurrent.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-@Service
-public class TokenMatchingMatrix {
-    private final Map<List<String>, Set<DescriptionMatch>> cells = new ConcurrentHashMap<>();
+import static org.snomed.snowstorm.core.data.domain.Description.Fields.*;
+import static org.snomed.snowstorm.core.data.domain.Description.Fields.TERM;
 
+@Service
+public class TokenMatchMatrixService {
     @Autowired
-    AugmentedLexiconService augmentedLexiconService;
+    ConceptService conceptService;
 
     ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+
+    private final Map<List<String>, Set<DescriptionMatch>> cells = new ConcurrentHashMap<>();
+
+    private static final String DESCRIPTION_INDEX = "description";
+
+    final int MAX_TOKEN_SUBSEQUENCE_LENGTH = 5;
+
 
     @Getter
     private List<DescriptionMatch> topScoredDescriptions = new ArrayList<>();
 
 
-    public void generateLexicon(List<String> tokens) {
+    private void generateLexicon(List<String> tokens) {
         int numOfCells = tokens.size() + tokens.size() * (tokens.size() - 1) / 2;
         List<Future<?>> futureList = new ArrayList<>(numOfCells);
 
         // for each token get the descriptionIds/wordCounts of the descriptions that contain the token
         for (String token : tokens) {
             Future<?> future = executorService.submit(() -> {
-                Set<DescriptionMatch> descriptionMatchSet = augmentedLexiconService.getDescriptionsContainingSingleToken(token);
+                Set<DescriptionMatch> descriptionMatchSet = getDescriptionsContainingSingleToken(token);
                 cells.put(List.of(token), descriptionMatchSet);
             });
             futureList.add(future);
         }
         joinAndClearFutures(futureList);
 
-
         for (int i = 0; i < tokens.size(); i++) {
-            for (int j = i + 1; j < tokens.size(); j++) {
+            for (int j = i + 1; j < tokens.size() && j - i + 1 <= MAX_TOKEN_SUBSEQUENCE_LENGTH; j++) {
                 int finalI = i;
                 int finalJ = j;
                 Future<?> future = executorService.submit(() -> {
@@ -87,7 +101,7 @@ public class TokenMatchingMatrix {
         futureList.clear();
     }
 
-    public void filterTopMatches(double score) {
+    private void filterTopMatches(double score) {
         final int maxAmount = 64;
         topScoredDescriptions = cells.keySet().stream()
                 .map(cells::get)
@@ -98,9 +112,56 @@ public class TokenMatchingMatrix {
                 .collect(Collectors.toList());
     }
 
-    public void clearMatrix(){
+    private void clearMatrix(){
         cells.clear();
         topScoredDescriptions.clear();
+    }
+
+    @Autowired
+    ElasticsearchOperations elasticsearchOperations;
+
+    public Set<DescriptionMatch> getDescriptionsContainingSingleToken(String token) {
+        Query containsTokenQuery = new NativeSearchQueryBuilder()
+                .withFilter(QueryBuilders.wildcardQuery(TERM_FOLDED, "* " + token + " *"))
+                .withFields(DESCRIPTION_ID, TERM)
+                .build();
+        Query startsWithTokenQuery = new NativeSearchQueryBuilder()
+                .withFilter(QueryBuilders.wildcardQuery(TERM_FOLDED, token + " *"))
+                .withFields(DESCRIPTION_ID, TERM)
+                .build();
+        Query endsWithTokenQuery = new NativeSearchQueryBuilder()
+                .withFilter(QueryBuilders.wildcardQuery(TERM_FOLDED, "* " + token))
+                .withFields(DESCRIPTION_ID, TERM)
+                .build();
+        Query directMatchQuery = new NativeSearchQueryBuilder()
+                .withFilter(QueryBuilders.matchQuery(TERM_FOLDED, token))
+                .withFields(DESCRIPTION_ID, TERM)
+                .build();
+        List<Query> queries = List.of(containsTokenQuery, startsWithTokenQuery, endsWithTokenQuery, directMatchQuery);
+
+        List<SearchHits<Description>> searchHitsPerQuery = elasticsearchOperations.multiSearch(
+                queries, Description.class, IndexCoordinates.of(DESCRIPTION_INDEX)
+        );
+
+        return searchHitsPerQuery.stream()
+                .map(SearchHits::getSearchHits)
+                .flatMap(Collection::stream)
+                .map(SearchHit::getContent)
+                .map(DescriptionMatch::new)
+                .peek(dIdContainer -> dIdContainer.computeScore(1))
+                .collect(Collectors.toSet());
+    }
+
+    public Set<String> generateMatchingDescriptions(String input, double threshold){
+        List<String> tokens = InputTokenizer.tokenize(input);
+        clearMatrix();
+        generateLexicon(tokens);
+        filterTopMatches(threshold);
+        List<DescriptionMatch> topMatches = getTopScoredDescriptions();
+
+        return topMatches.stream()
+                .map(DescriptionMatch::getDescriptionId)
+                .collect(Collectors.toSet());
     }
 
 }

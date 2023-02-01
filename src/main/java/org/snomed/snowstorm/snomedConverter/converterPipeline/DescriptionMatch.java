@@ -17,7 +17,7 @@ public class DescriptionMatch {
         return res;
     };
     private final String descriptionId;
-    private double score;
+    private int score;
 
     // for debugging
     private final String fullDescriptionTerm;
@@ -31,7 +31,7 @@ public class DescriptionMatch {
     }
 
     public DescriptionMatch computeScore(int numOfMatchingTokens) {
-        score = numOfMatchingTokens / numOfTokensInDescriptionTerm;
+        score = (int) (100 * numOfMatchingTokens / numOfTokensInDescriptionTerm);
         return this;
     }
 

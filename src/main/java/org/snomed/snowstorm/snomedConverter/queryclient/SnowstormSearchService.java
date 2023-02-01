@@ -26,7 +26,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
-public class SnowstormEndpointsService {
+public class SnowstormSearchService {
 
 
     public static int count = 0;
