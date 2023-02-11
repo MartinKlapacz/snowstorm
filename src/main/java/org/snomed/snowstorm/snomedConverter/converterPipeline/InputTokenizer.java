@@ -18,6 +18,10 @@ public class InputTokenizer {
                 .map(String::toLowerCase)
                 .collect(Collectors.toList());
 
+        if (tokenList.size() == 1){
+            return tokenList;
+        }
+
         List<String> tokenListNoEqualNeighbours = new ArrayList<>(tokenList.size());
         for (int i = 0; i < tokenList.size() - 1; i++) {
             tokenListNoEqualNeighbours.add(tokenList.get(i));
