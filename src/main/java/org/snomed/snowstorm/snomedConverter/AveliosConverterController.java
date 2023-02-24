@@ -2,6 +2,7 @@ package org.snomed.snowstorm.snomedConverter;
 
 import com.google.gson.Gson;
 import org.snomed.snowstorm.core.data.services.ConceptService;
+import org.snomed.snowstorm.rest.BranchController;
 import org.snomed.snowstorm.snomedConverter.converterPipeline.TokenMatchMatrixService;
 import org.snomed.snowstorm.snomedConverter.queryclient.SnowstormSearchService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +27,9 @@ public class AveliosConverterController {
     @Autowired
     ConceptService conceptService;
 
+    @Autowired
+    BranchController branchController;
+
     @Value("${avelios.converter.threshold:0.5}")
     double threshold;
 
@@ -41,6 +45,35 @@ public class AveliosConverterController {
 
         return new Gson().toJson(descriptionId);
     }
+
+
+    @GetMapping(value = "/deleteUnnecessaryBranches")
+    public String deleteUnnecessaryBranches() {
+        Set<String> idsOfBranchesToDelete = Set.of(
+                "308916002", // Environment or geographical location
+                "272379006", // Event, Organism (organism)
+                "410607006", // Organism (organism)
+                "373873005", // Pharmaceutical / biologic product (product)
+                "260787004", // Physical object (physical object)
+//                "71388002",  // Procedure (procedure)
+                "419891008", // Record artifact (record artifact)
+                "243796009", // Situation with explicit context (situation)
+                "900000000000441003", // SNOMED CT Model Component (metadata)
+                "48176007", // Social context (social concept)
+                "370115009", // Special concept (special concept)
+                "254291000" //  Staging and scales (staging scale)
+        );
+
+        branchController.unlockBranch("MAIN");
+        for (String branchId: idsOfBranchesToDelete){
+            Set<String> conceptIdsToDelete = snowstormSearchService.findConceptDescendants(branchId);
+            conceptIdsToDelete.add(branchId);
+            conceptService.deleteConceptAndComponents(conceptIdsToDelete, "MAIN", true);
+        }
+        branchController.lockBranch("MAIN", "lock after unlocking for deleting concepts");
+        return new Gson().toJson("success");
+    }
+
 
     @GetMapping(value = "commonAncestors/{input1}/{input2}")
     public String getCommonAncestors(@PathVariable String input1, @PathVariable String input2) {

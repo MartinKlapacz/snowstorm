@@ -653,8 +653,12 @@ public class ConceptService extends ComponentService {
 	}
 
 	public void deleteConceptAndComponents(String conceptId, String path, boolean force) {
-		try (final Commit commit = branchService.openCommit(path, branchMetadataHelper.getBranchLockMetadata("Deleting concept " + conceptId))) {
-			deleteConceptsAndComponentsWithinCommit(Collections.singleton(conceptId), commit, force);
+		deleteConceptAndComponents(Collections.singleton(conceptId), path, force);
+	}
+
+	public void deleteConceptAndComponents(Collection<String> conceptIds, String path, boolean force) {
+		try (final Commit commit = branchService.openCommit(path, branchMetadataHelper.getBranchLockMetadata("Deleting " + conceptIds.size() + " concepts"))) {
+			deleteConceptsAndComponentsWithinCommit(conceptIds, commit, force);
 			commit.markSuccessful();
 		}
 	}
