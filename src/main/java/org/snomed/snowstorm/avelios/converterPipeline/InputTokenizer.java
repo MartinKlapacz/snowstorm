@@ -1,4 +1,4 @@
-package org.snomed.snowstorm.snomedConverter.converterPipeline;
+package org.snomed.snowstorm.avelios.converterPipeline;
 
 import java.util.*;
 import java.util.stream.Collectors;

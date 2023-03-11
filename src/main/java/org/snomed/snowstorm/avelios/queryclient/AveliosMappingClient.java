@@ -1,4 +1,4 @@
-package org.snomed.snowstorm.snomedConverter.queryclient;
+package org.snomed.snowstorm.avelios.queryclient;
 
 import org.apache.http.HttpHost;
 import org.elasticsearch.action.search.SearchRequest;

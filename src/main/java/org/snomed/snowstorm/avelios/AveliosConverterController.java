@@ -1,9 +1,9 @@
-package org.snomed.snowstorm.snomedConverter;
+package org.snomed.snowstorm.avelios;
 
 import com.google.gson.Gson;
 import org.snomed.snowstorm.core.data.services.ConceptService;
-import org.snomed.snowstorm.snomedConverter.converterPipeline.TokenMatchMatrixService;
-import org.snomed.snowstorm.snomedConverter.queryclient.SnowstormSearchService;
+import org.snomed.snowstorm.avelios.converterPipeline.TokenMatchMatrixService;
+import org.snomed.snowstorm.avelios.queryclient.SnowstormSearchService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;

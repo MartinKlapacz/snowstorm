@@ -1,4 +1,4 @@
-package org.snomed.snowstorm.snomedConverter.converterPipeline;
+package org.snomed.snowstorm.avelios.converterPipeline;
 
 import lombok.Getter;
 import org.elasticsearch.index.query.QueryBuilders;

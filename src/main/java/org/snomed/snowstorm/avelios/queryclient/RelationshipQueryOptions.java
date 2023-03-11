@@ -1,4 +1,4 @@
-package org.snomed.snowstorm.snomedConverter.queryclient;
+package org.snomed.snowstorm.avelios.queryclient;
 
 import lombok.*;
 import org.springframework.data.domain.PageRequest;

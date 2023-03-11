@@ -1,4 +1,4 @@
-package org.snomed.snowstorm.snomedConverter.queryclient;
+package org.snomed.snowstorm.avelios.queryclient;
 
 import io.kaicode.rest.util.branchpathrewrite.BranchPathUriUtil;
 import org.snomed.snowstorm.config.Config;
