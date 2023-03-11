@@ -66,7 +66,7 @@ public class AveliosConverterController {
 
         branchController.unlockBranch("MAIN");
         for (String branchId: idsOfBranchesToDelete){
-            Set<String> conceptIdsToDelete = snowstormSearchService.findConceptDescendants(branchId);
+            Set<String> conceptIdsToDelete = snowstormSearchService.findConceptDescendants(Set.of(branchId));
             conceptIdsToDelete.add(branchId);
             conceptService.deleteConceptAndComponents(conceptIdsToDelete, "MAIN", true);
         }
