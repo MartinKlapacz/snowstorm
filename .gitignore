@@ -3,8 +3,6 @@ target
 !.gitignore
 !.travis.yml
 *.iml
-/aveliosdata
-/aveliosdatabackup
 /release
 /application-*.properties*
 *.log
@@ -14,5 +12,4 @@ snomed-drools-rules
 /tmp
 /local*
 build
-SnomedCT_InternationalRF2_PRODUCTION_20220930T120000Z
-SnomedCT_InternationalRF2_PRODUCTION_20220930T120000Z.zip
+data

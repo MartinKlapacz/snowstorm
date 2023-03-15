@@ -45,37 +45,37 @@ public class SnowstormSearchService {
         return conceptController.findBrowserConcept(BRANCH, conceptId, Relationship.CharacteristicType.inferred, Config.DEFAULT_ACCEPT_LANG_HEADER);
     }
 
-    public List<String> findConceptChildren(Collection<String> conceptIds) {
+    public Set<String> findConceptChildren(Collection<String> conceptIds) {
         String findChildrenECL = conceptIds.stream().map(id -> "<<! " + id).collect(Collectors.joining(" OR "));
         return findConceptsByECL(conceptIds, findChildrenECL);
     }
 
-    public List<String> findConceptParents(Collection<String> conceptIds) {
+    public Set<String> findConceptParents(Collection<String> conceptIds) {
         String findParentsECL = conceptIds.stream().map(id -> ">>! " + id).collect(Collectors.joining(" OR "));
         return findConceptsByECL(conceptIds, findParentsECL);
     }
 
-    public List<String> findConceptDescendants(Collection<String> conceptIds) {
+    public Set<String> findConceptDescendants(Collection<String> conceptIds) {
         String findParentsECL = conceptIds.stream().map(id -> "<< " + id).collect(Collectors.joining(" OR "));
         return findConceptsByECL(conceptIds, findParentsECL);
     }
 
-    public List<String> findConceptAncestors(String conceptId) {
+    public Set<String> findConceptAncestors(String conceptId) {
         return findConceptAncestors(Set.of(conceptId));
     }
-    public List<String> findConceptAncestors(Collection<String> conceptIds) {
+    public Set<String> findConceptAncestors(Collection<String> conceptIds) {
         return findConceptAncestors(conceptIds, 50);
     }
-    public List<String> findConceptAncestors(Collection<String> conceptIds, Integer limit) {
+    public Set<String> findConceptAncestors(Collection<String> conceptIds, Integer limit) {
         String findParentsECL = conceptIds.stream().map(id -> ">> " + id).collect(Collectors.joining(" OR "));
         return findConceptsByECL(conceptIds, findParentsECL, limit);
     }
 
-    public List<String> filterPatientsWithPredecessorConcept(String targetConcept, Map<String, List<String>> patientIdToConceptsMap ) {
+    public List<String> filterPatientsWithPredecessorConcept(List<String> targetConcept, Map<String, Set<String>> patientIdToConceptsMap ) {
         List<String> matchingPatientIds = new ArrayList<>();
         for (String patientId: patientIdToConceptsMap.keySet()){
-            List<String> patientConcepts = patientIdToConceptsMap.get(patientId);
-            List<String> allAncestors = findConceptAncestors(patientConcepts, 10000);
+            Set<String> patientConcepts = patientIdToConceptsMap.get(patientId);
+            Set<String> allAncestors = findConceptAncestors(patientConcepts, 10000);
             if (allAncestors.contains(targetConcept)) {
                 matchingPatientIds.add(patientId);
             }
@@ -85,11 +85,11 @@ public class SnowstormSearchService {
 
 
 
-    private List<String> findConceptsByECL(Collection<String> conceptIds, String ecl) {
+    private Set<String> findConceptsByECL(Collection<String> conceptIds, String ecl) {
         return findConceptsByECL(conceptIds, ecl, null);
     }
 
-    private List<String> findConceptsByECL(Collection<String> conceptIds, String ecl, Integer limit) {
+    private Set<String> findConceptsByECL(Collection<String> conceptIds, String ecl, Integer limit) {
         ConceptSearchRequest conceptSearchRequest = new ConceptSearchRequest();
         conceptSearchRequest.setTermActive(true);
         conceptSearchRequest.setEclFilter(ecl);
@@ -99,7 +99,7 @@ public class SnowstormSearchService {
         ItemsPage<?> parentsItemPage = conceptController.search("MAIN", conceptSearchRequest, Config.DEFAULT_ACCEPT_LANG_HEADER, false);
         return parentsItemPage.getItems().stream()
                 .map(item -> (String) item)
-                .collect(Collectors.toList());
+                .collect(Collectors.toSet());
     }
 
     public Set<ConceptMini> browserDescriptionSearch(String textInput) {
