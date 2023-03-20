@@ -1,7 +1,9 @@
 package org.snomed.snowstorm.avelios;
 
 import com.google.gson.Gson;
+import org.elasticsearch.search.SearchHit;
 import org.snomed.snowstorm.avelios.converterPipeline.TokenMatchMatrixService;
+import org.snomed.snowstorm.avelios.queryclient.AveliosMappingService;
 import org.snomed.snowstorm.avelios.queryclient.SnowstormSearchService;
 import org.snomed.snowstorm.core.data.services.ConceptService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +16,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping(value = "/convert", produces = "application/json")
@@ -27,6 +30,9 @@ public class AveliosConverterController {
 
     @Autowired
     ConceptService conceptService;
+
+    @Autowired
+    AveliosMappingService aveliosMappingService;
 
     @Value("${avelios.converter.threshold:0.5}")
     double threshold;
@@ -74,4 +80,14 @@ public class AveliosConverterController {
         return new ResponseEntity<>(ancestorIds, HttpStatus.OK);
     }
 
+    @GetMapping(value = "icd10ToSctId/{icd10}")
+    public ResponseEntity<List<String>> getSctIdForIcd10(@PathVariable String icd10) {
+        List<SearchHit> searchHits = aveliosMappingService.sctIdForIcd10(icd10);
+        List<String> sctIdList = searchHits.stream()
+                .map(SearchHit::getSourceAsMap)
+                .map(map -> map.get("sctId"))
+                .map(obj -> (String) obj)
+                .collect(Collectors.toList());
+        return new ResponseEntity<>(sctIdList, HttpStatus.OK);
+    }
 }

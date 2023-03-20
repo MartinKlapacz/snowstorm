@@ -76,7 +76,7 @@ public class SnowstormSearchService {
         for (String patientId: patientIdToConceptsMap.keySet()){
             Set<String> patientConcepts = patientIdToConceptsMap.get(patientId);
             Set<String> allAncestors = findConceptAncestors(patientConcepts, 10000);
-            if (allAncestors.contains(targetConcept)) {
+            if (allAncestors.containsAll(targetConcept)) {
                 matchingPatientIds.add(patientId);
             }
         }

@@ -12,36 +12,42 @@ import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.springframework.data.elasticsearch.core.ESRestHighLevelClient;
+import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.List;
 
-public class AveliosMappingClient{
+@Service
+public class AveliosMappingService {
 
     RestHighLevelClient client;
-    private final String INDEX_NAME = "avelios-mapping";
 
-    public AveliosMappingClient(String host, int port) {
-        RestClientBuilder restClientBuilder = RestClient.builder(new HttpHost(host, port));
+    public AveliosMappingService() {
+        RestClientBuilder restClientBuilder = RestClient.builder(new HttpHost("localhost", 9200));
         this.client = new ESRestHighLevelClient(restClientBuilder);
     }
 
-    public List<SearchHit> aveliosNameForSCTID(String aveliosName){
-        return getMappingValue("name", aveliosName);
+    public List<SearchHit> aveliosNameForSCTID(String aveliosName) {
+        return getMappingValue("name", aveliosName, "avelios-mapping");
     }
 
-    public List<SearchHit> sctidForAveliosName(String sctid){
-        return getMappingValue("SCTID", sctid);
+    public List<SearchHit> sctIdForAveliosName(String sctId) {
+        return getMappingValue("SCTID", sctId, "avelios-mapping");
     }
 
-    private List<SearchHit> getMappingValue(String fieldName, String fieldValue){
+    public List<SearchHit> sctIdForIcd10(String icd10) {
+        return getMappingValue("icd10Code", icd10, "sct-to-icd10");
+    }
+
+    private List<SearchHit> getMappingValue(String fieldName, String fieldValue, String indexName) {
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         searchSourceBuilder.query(QueryBuilders.matchQuery(fieldName, fieldValue).fuzziness(Fuzziness.ZERO));
 
-        String[] includeFields = new String[]{"name", "SCTID"};
+//        String[] includeFields = new String[]{"name", "SCTID"};
+        String[] includeFields = new String[]{"sctId", "icd10Code" };
         searchSourceBuilder.fetchSource(includeFields, new String[]{});
 
-        SearchRequest searchRequest = new SearchRequest(INDEX_NAME);
+        SearchRequest searchRequest = new SearchRequest(indexName);
         searchRequest.source(searchSourceBuilder);
         SearchResponse response;
         try {
@@ -50,15 +56,5 @@ public class AveliosMappingClient{
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-    }
-
-
-    public static void main(String[] args) {
-        AveliosMappingClient client = new AveliosMappingClient("localhost", 9200);
-        List<SearchHit> searchHits = client.sctidForAveliosName("102002");
-        searchHits.forEach(System.out::println);
-
-//        List<SearchHit> searchHits = client.aveliosNameForSCTID("beta-2-Glykoprotein");
-        searchHits.forEach(System.out::println);
     }
 }
