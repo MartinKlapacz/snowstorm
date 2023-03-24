@@ -1,6 +1,7 @@
 package org.snomed.snowstorm.avelios;
 
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import org.elasticsearch.search.SearchHit;
 import org.snomed.snowstorm.avelios.converterPipeline.TokenMatchMatrixService;
 import org.snomed.snowstorm.avelios.queryclient.AveliosMappingService;
@@ -12,14 +13,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.lang.reflect.Type;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping(value = "/convert", produces = "application/json")
+@RequestMapping(value = "/avelios", produces = "application/json")
 public class AveliosConverterController {
 
     @Autowired
@@ -36,6 +35,8 @@ public class AveliosConverterController {
 
     @Value("${avelios.converter.threshold:0.5}")
     double threshold;
+
+    private final Gson gson = new Gson();
 
     @GetMapping(value = "/{input}")
     public String mapTextToSnomedCTConcepts(@PathVariable String input) {
@@ -67,9 +68,12 @@ public class AveliosConverterController {
     }
 
 
-    @GetMapping(value = "filterPatients/{targetConceptIds}")
-    public ResponseEntity<List<String>> filterPatientsWithMatchingConcepts(@PathVariable String targetConceptIds, @RequestBody Map<String, Set<String>> patientIdToConceptIds){
+    @GetMapping(value = "filterPatients/{targetConceptIds}/{sctData}")
+    public ResponseEntity<List<String>> filterPatientsWithMatchingConcepts(@PathVariable String targetConceptIds, @PathVariable String sctData){
         List<String> targetConceptIdList = Arrays.asList(targetConceptIds.split(","));
+        Type type = new TypeToken<Map<String, Set<String>>>(){}.getType();
+        Map<String, Set<String>> patientIdToConceptIds = gson.fromJson(sctData, type);
+
         List<String> matchingPatients = snowstormSearchService.filterPatientsWithPredecessorConcept(targetConceptIdList, patientIdToConceptIds);
         return new ResponseEntity<>(matchingPatients, HttpStatus.OK);
     }
@@ -81,13 +85,8 @@ public class AveliosConverterController {
     }
 
     @GetMapping(value = "icd10ToSctId/{icd10}")
-    public ResponseEntity<List<String>> getSctIdForIcd10(@PathVariable String icd10) {
-        List<SearchHit> searchHits = aveliosMappingService.sctIdForIcd10(icd10);
-        List<String> sctIdList = searchHits.stream()
-                .map(SearchHit::getSourceAsMap)
-                .map(map -> map.get("sctId"))
-                .map(obj -> (String) obj)
-                .collect(Collectors.toList());
-        return new ResponseEntity<>(sctIdList, HttpStatus.OK);
+    public ResponseEntity<Map<String, List<String>>> getSctIdForIcd10(@PathVariable String icd10) {
+        var searchHits = aveliosMappingService.sctIdForIcd10(icd10.split(","));
+        return new ResponseEntity<>(searchHits, HttpStatus.OK);
     }
 }
