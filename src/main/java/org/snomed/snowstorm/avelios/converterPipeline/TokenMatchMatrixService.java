@@ -152,16 +152,17 @@ public class TokenMatchMatrixService {
                 .collect(Collectors.toSet());
     }
 
-    public Set<String> generateMatchingDescriptions(String input, double threshold){
+    public Map<String, Integer> generateMatchingDescriptions(String input, double threshold){
         List<String> tokens = InputTokenizer.tokenize(input);
         clearMatrix();
         generateLexicon(tokens);
         filterTopMatches(threshold);
         List<DescriptionMatch> topMatches = getTopScoredDescriptions();
 
-        return topMatches.stream()
-                .map(DescriptionMatch::getDescriptionId)
-                .collect(Collectors.toSet());
+        return topMatches.stream().distinct().collect(Collectors.toMap(
+                DescriptionMatch::getDescriptionId,
+                DescriptionMatch::getScore
+        ));
     }
 
 }

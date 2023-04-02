@@ -152,4 +152,8 @@ public class SnowstormSearchService {
     public Description findDescription(String descriptionId) {
         return descriptionController.fetchDescription(BRANCH, descriptionId);
     }
+
+    public boolean isClinicalFining(String conceptId){
+        return findConceptAncestors(conceptId).contains("404684003");
+    }
 }

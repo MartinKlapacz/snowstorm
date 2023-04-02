@@ -23,9 +23,9 @@ public class InputTokenizer {
         }
 
         List<String> tokenListNoEqualNeighbours = new ArrayList<>(tokenList.size());
-        for (int i = 0; i < tokenList.size() - 1; i++) {
+        for (int i = 0; i < tokenList.size(); i++) {
             tokenListNoEqualNeighbours.add(tokenList.get(i));
-            if (tokenList.get(i).equals(tokenList.get(i + 1))) {
+            if (i != tokenList.size() - 1 && tokenList.get(i).equals(tokenList.get(i + 1))) {
                 // skip if current token is equal to neighbour
                 i++;
             }
