@@ -1,6 +1,5 @@
 package org.snomed.snowstorm.avelios.queryclient;
 
-import com.google.gson.Gson;
 import org.apache.http.HttpHost;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
@@ -58,16 +57,15 @@ public class AveliosMappingService {
         // Create filters
         FiltersAggregator.KeyedFilter[] filters = new FiltersAggregator.KeyedFilter[targetColumnValues.length];
         for (int i = 0; i < targetColumnValues.length; i++) {
-            FiltersAggregator.KeyedFilter filter = new FiltersAggregator.KeyedFilter(
+            filters[i] = new FiltersAggregator.KeyedFilter(
                     targetColumnValues[i],
-                    QueryBuilders.termQuery(targetColumnName, targetColumnValues[i])
+                    QueryBuilders.matchQuery(targetColumnName, targetColumnValues[i])
             );
-            filters[i] = filter;
         }
-        var filtersAggregation = AggregationBuilders.filters("my_name", filters);
-
+        String aggregationName = "by_icd10Code";
+        var filtersAggregation = AggregationBuilders.filters(aggregationName, filters);
         var topHitsAggregation = AggregationBuilders.topHits("sctIds")
-                .size(1000)
+                .size(100)
                 .fetchSource(new String[]{"sctId"}, null);
 
         filtersAggregation.subAggregation(topHitsAggregation);
@@ -83,7 +81,7 @@ public class AveliosMappingService {
             return Collections.emptyMap();
         }
 
-        List<? extends Filters.Bucket> buckets = ((ParsedFilters) searchResponse.getAggregations().getAsMap().get("my_name")).getBuckets();
+        List<? extends Filters.Bucket> buckets = ((ParsedFilters) searchResponse.getAggregations().getAsMap().get(aggregationName)).getBuckets();
         Map<String, List<String>> result = new HashMap<>();
 
         for (Filters.Bucket bucket : buckets) {

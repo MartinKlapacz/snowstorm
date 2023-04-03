@@ -34,10 +34,6 @@ public class AveliosController {
         Map<String, Integer> descriptionIdsAndScore
                 = tokenMatchMatrixService.generateMatchingDescriptions(input, threshold);
 
-//        List<String> clinicalFindingIds = descriptionIdsAndScore.keySet().stream()
-//                .filter(snowstormSearchService::isClinicalFining)
-//                .collect(Collectors.toList());
-//        descriptionIdsAndScore.keySet().retainAll(clinicalFindingIds);
         return new ResponseEntity<>(descriptionIdsAndScore, HttpStatus.OK);
     }
 
