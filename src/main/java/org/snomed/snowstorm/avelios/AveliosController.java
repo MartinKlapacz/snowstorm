@@ -1,6 +1,5 @@
 package org.snomed.snowstorm.avelios;
 
-import com.google.gson.Gson;
 import org.snomed.snowstorm.avelios.converterPipeline.TokenMatchMatrixService;
 import org.snomed.snowstorm.avelios.queryclient.AveliosMappingService;
 import org.snomed.snowstorm.avelios.queryclient.SnowstormSearchService;
@@ -10,8 +9,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping(value = "/avelios", produces = "application/json")
@@ -37,29 +38,21 @@ public class AveliosController {
         return new ResponseEntity<>(descriptionIdsAndScore, HttpStatus.OK);
     }
 
-
-    @GetMapping(value = "mapSnomedToICD10/{sctId}")
-    public String mapSnomedToICD10(@PathVariable String sctId) {
-        return null;
-    }
-
-
     @PostMapping(value = "filterPatients/{targetConceptIds}")
     public ResponseEntity<List<String>> filterPatientsWithMatchingConcepts(@PathVariable String targetConceptIds, @RequestBody Map<String, Set<String>> patientData){
         List<String> targetConceptIdList = Arrays.asList(targetConceptIds.split(","));
         List<String> matchingPatients = snowstormSearchService.filterPatientsWithPredecessorConcept(targetConceptIdList, patientData);
         return new ResponseEntity<>(matchingPatients, HttpStatus.OK);
     }
+    @GetMapping(value = "icd10ToSctId/{icd10}")
+    public ResponseEntity<Map<String, List<String>>> getSctIdForIcd10(@PathVariable String icd10) {
+        var searchHits = aveliosMappingService.sctIdForIcd10(icd10.split(","));
+        return new ResponseEntity<>(searchHits, HttpStatus.OK);
+    }
 
     @GetMapping(value = "ancestors/{conceptId}")
     public ResponseEntity<Set<String>> getAncestors(@PathVariable String conceptId) {
         Set<String> ancestorIds = snowstormSearchService.findConceptAncestors(conceptId);
         return new ResponseEntity<>(ancestorIds, HttpStatus.OK);
-    }
-
-    @GetMapping(value = "icd10ToSctId/{icd10}")
-    public ResponseEntity<Map<String, List<String>>> getSctIdForIcd10(@PathVariable String icd10) {
-        var searchHits = aveliosMappingService.sctIdForIcd10(icd10.split(","));
-        return new ResponseEntity<>(searchHits, HttpStatus.OK);
     }
 }
