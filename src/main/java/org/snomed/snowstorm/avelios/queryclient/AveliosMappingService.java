@@ -91,7 +91,7 @@ public class AveliosMappingService {
         return result;
     }
 
-    public Map<String, List<String>> findSctIdsForKnowledgeInputNames(List<String> names) {
+    public Map<String, Set<String>> findSctIdsForKnowledgeInputNames(List<String> names) {
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         searchSourceBuilder.size(0);
 
@@ -121,16 +121,16 @@ public class AveliosMappingService {
         }
 
         List<? extends Filters.Bucket> buckets = ((ParsedFilters) searchResponse.getAggregations().getAsMap().get(aggregationName)).getBuckets();
-        Map<String, List<String>> result = new HashMap<>();
+        Map<String, Set<String>> result = new HashMap<>();
 
         for (Filters.Bucket bucket : buckets) {
             String icd10Code = bucket.getKeyAsString();
             SearchHit[] aggregationHits = ((ParsedTopHits) bucket.getAggregations().get("names")).getHits().getHits();
-            List<String> sctIds = Arrays.stream(aggregationHits)
+            Set<String> sctIds = Arrays.stream(aggregationHits)
                     .map(SearchHit::getSourceAsMap)
                     .map(map -> map.get("sctId"))
                     .map(sctId -> (String) sctId)
-                    .collect(Collectors.toList());
+                    .collect(Collectors.toSet());
             result.put(icd10Code, sctIds);
         }
         return result;

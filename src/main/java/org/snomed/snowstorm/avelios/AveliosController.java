@@ -56,10 +56,10 @@ public class AveliosController {
         return new ResponseEntity<>(ancestorIds, HttpStatus.OK);
     }
 
-    @GetMapping(value = "mapKnowledgeInputNamesToSctids/{names}")
-    public ResponseEntity<Map<String, List<String>>> mapKnowledgeInputsToSctIds(@PathVariable String names) {
+    @GetMapping(value = "mapKnowledgeInputNamesToSctIds/{names}")
+    public ResponseEntity<Map<String, Set<String>>> mapKnowledgeInputsToSctIds(@PathVariable String names) {
         List<String> nameArray = Arrays.asList(names.split(","));
-        Map<String, List<String>> conceptIds = aveliosMappingService.findSctIdsForKnowledgeInputNames(nameArray);
+        Map<String, Set<String>> conceptIds = aveliosMappingService.findSctIdsForKnowledgeInputNames(nameArray);
         return new ResponseEntity<>(conceptIds, HttpStatus.OK);
     }
 }
