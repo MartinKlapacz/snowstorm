@@ -91,24 +91,48 @@ public class AveliosMappingService {
         return result;
     }
 
-    public List<String> findSctIdsForKnowledgeInputNames(List<String> names) {
-        SearchRequest searchRequest = new SearchRequest("knowledge-input-to-sct");
+    public Map<String, List<String>> findSctIdsForKnowledgeInputNames(List<String> names) {
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        searchSourceBuilder.size(0);
 
-        BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
-        for (String name : names) {
-            boolQueryBuilder.should(QueryBuilders.matchQuery("name", name));
+        // Create filters
+        FiltersAggregator.KeyedFilter[] filters = new FiltersAggregator.KeyedFilter[names.size()];
+        for (int i = 0; i < names.size(); i++) {
+            filters[i] = new FiltersAggregator.KeyedFilter(
+                    names.get(i),
+                    QueryBuilders.matchQuery("name", names.get(i))
+            );
         }
-        searchSourceBuilder.query(boolQueryBuilder);
+        String aggregationName = "by_knowledge_input_name";
+        var filtersAggregation = AggregationBuilders.filters(aggregationName, filters);
+        var topHitsAggregation = AggregationBuilders.topHits("names").size(100);
 
+        filtersAggregation.subAggregation(topHitsAggregation);
+        searchSourceBuilder.aggregation(filtersAggregation);
+        SearchRequest searchRequest = new SearchRequest("knowledge-input-to-sct");
         searchRequest.source(searchSourceBuilder);
 
-
+        SearchResponse searchResponse;
         try {
-            var foo = client.search(searchRequest, RequestOptions.DEFAULT);
-            return null;
+            searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            e.printStackTrace();
+            return Collections.emptyMap();
         }
+
+        List<? extends Filters.Bucket> buckets = ((ParsedFilters) searchResponse.getAggregations().getAsMap().get(aggregationName)).getBuckets();
+        Map<String, List<String>> result = new HashMap<>();
+
+        for (Filters.Bucket bucket : buckets) {
+            String icd10Code = bucket.getKeyAsString();
+            SearchHit[] aggregationHits = ((ParsedTopHits) bucket.getAggregations().get("names")).getHits().getHits();
+            List<String> sctIds = Arrays.stream(aggregationHits)
+                    .map(SearchHit::getSourceAsMap)
+                    .map(map -> map.get("sctId"))
+                    .map(sctId -> (String) sctId)
+                    .collect(Collectors.toList());
+            result.put(icd10Code, sctIds);
+        }
+        return result;
     }
 }
