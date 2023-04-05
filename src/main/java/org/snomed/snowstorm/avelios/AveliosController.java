@@ -55,4 +55,11 @@ public class AveliosController {
         Set<String> ancestorIds = snowstormSearchService.findConceptAncestors(conceptId);
         return new ResponseEntity<>(ancestorIds, HttpStatus.OK);
     }
+
+    @GetMapping(value = "mapKnowledgeInputNamesToSctids/{names}")
+    public ResponseEntity<List<String>> mapKnowledgeInputsToSctIds(@PathVariable String names) {
+        List<String> nameArray = Arrays.asList(names.split(","));
+        List<String> conceptIds = aveliosMappingService.findSctIdsForKnowledgeInputNames(nameArray);
+        return new ResponseEntity<>(conceptIds, HttpStatus.OK);
+    }
 }

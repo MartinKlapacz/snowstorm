@@ -7,6 +7,7 @@ import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestClientBuilder;
 import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
@@ -36,14 +37,6 @@ public class AveliosMappingService {
         RestClientBuilder restClientBuilder = RestClient.builder(new HttpHost("localhost", 9200));
         this.client = new ESRestHighLevelClient(restClientBuilder);
     }
-
-//    public List<SearchHit> aveliosNameForSCTID(String aveliosName) {
-//        return getMappingValue("name", aveliosName, "avelios-mapping");
-//    }
-//
-//    public List<SearchHit> sctIdForAveliosName(String sctId) {
-//        return getMappingValue("SCTID", sctId, "avelios-mapping");
-//    }
 
     public Map<String, List<String>> sctIdForIcd10(String... icd10Codes) {
         return getMappingValue("sct-to-icd10", "icd10Code", icd10Codes);
@@ -96,5 +89,26 @@ public class AveliosMappingService {
         }
 
         return result;
+    }
+
+    public List<String> findSctIdsForKnowledgeInputNames(List<String> names) {
+        SearchRequest searchRequest = new SearchRequest("knowledge-input-to-sct");
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+
+        BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+        for (String name : names) {
+            boolQueryBuilder.should(QueryBuilders.matchQuery("name", name));
+        }
+        searchSourceBuilder.query(boolQueryBuilder);
+
+        searchRequest.source(searchSourceBuilder);
+
+
+        try {
+            var foo = client.search(searchRequest, RequestOptions.DEFAULT);
+            return null;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
