@@ -16,6 +16,8 @@ services:
       - "9600:9600"
     environment:
       LS_JAVA_OPTS: -Xms256m -Xmx256m
+      ICD10_MAP_FILE: "/data/icd10ToSctMapClean.csv"
+      KNOWLEDGE_INPUT_TO_SCT_FILE: "/data/knowledge-input-to-sct.csv"
     networks:
       - elk
 
