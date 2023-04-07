@@ -313,24 +313,29 @@
 		</extensions>
 		<plugins>
 			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.8.0</version>
+				<configuration>
+					<source>11</source>
+					<target>11</target>
+				</configuration>
+			</plugin>
+			<plugin>
 				<groupId>org.xolstice.maven.plugins</groupId>
 				<artifactId>protobuf-maven-plugin</artifactId>
 				<version>0.6.1</version>
 				<configuration>
-					<protoSourceRoot>${project.basedir}/../../avelios/backend/proto_lib/src/main/proto</protoSourceRoot>
+					<protocExecutable>/usr/bin/protoc</protocExecutable>
+					<protoSourceRoot>../proto_lib/src/main/proto</protoSourceRoot>
 					<protocArtifact>com.google.protobuf:protoc:3.19.1:exe:${os.detected.classifier}</protocArtifact>
-					<protocPlugins>
-						<protocPlugin>
-							<id>grpc-java</id>
-							<artifactId>io.grpc:protoc-gen-grpc-java:1.43.1:exe:${os.detected.classifier}</artifactId>
-						</protocPlugin>
-					</protocPlugins>
+					<pluginId>grpc-java</pluginId>
+					<pluginArtifact>io.grpc:protoc-gen-grpc-java:1.43.1:exe:${os.detected.classifier}</pluginArtifact>
 				</configuration>
 				<executions>
 					<execution>
 						<goals>
 							<goal>compile</goal>
-							<goal>compile-custom</goal>
 						</goals>
 					</execution>
 				</executions>
@@ -380,14 +385,7 @@
 					</execution>
 				</executions>
 			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<configuration>
-					<source>11</source>
-					<target>11</target>
-				</configuration>
-			</plugin>
+
 		</plugins>
 	</build>
 	<profiles>
