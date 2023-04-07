@@ -7,7 +7,7 @@ target
 /application-*.properties*
 *.log
 /resources
-*.sh
+#*.sh
 snomed-drools-rules
 /tmp
 /local*
