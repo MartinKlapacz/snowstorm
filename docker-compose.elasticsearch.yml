@@ -30,7 +30,7 @@ services:
     depends_on:
       - elasticsearch
     volumes:
-      - kibanadata:/usr/share/kibana/data
+      - kibana:/usr/share/kibana/data
     ports:
       - ${KIBANA_PORT}:5601
     environment:
@@ -55,10 +55,13 @@ services:
 volumes:
   elastic:
     driver: local
-  kibanadata:
+  kibana:
     driver: local
 
 
 networks:
   elk:
     driver: bridge
+
+# /home/martin/.jdks/corretto-17.0.6/bin/java --add-opens java.base/java.util=ALL-UNNAMED -Dfile.encoding=UTF-8 -jar /home/martin/pro/avelios/backend/snowstorm/target/snowstorm-7.11.0.jar --elasticsearch.urls=http://localhost:9200
+# /home/martin/.jdks/corretto-11.0.18/bin/java /home/martin/pro/avelios/backend/snowstorm/target/snowstorm-7.11.0.jar --elasticsearch.urls=http://localhost:9200 --import-full=/home/martin/pro/avelios/backend/snowstorm/data/SnomedCT_InternationalRF2_PRODUCTION_20220930T120000Z.zip
