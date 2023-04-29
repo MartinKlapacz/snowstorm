@@ -62,4 +62,14 @@ public class AveliosController {
         Map<String, Set<String>> conceptIds = aveliosMappingService.findSctIdsForKnowledgeInputNames(nameArray);
         return new ResponseEntity<>(conceptIds, HttpStatus.OK);
     }
+
+    @PostMapping(value = "publish")
+    public ResponseEntity<String> publishFinishedTreatmentData(
+            @RequestParam String patientId,
+            @RequestParam String treatmentId,
+            @RequestParam String visitId, @RequestBody Map<String, List<String>> body) {
+        System.out.println("Storing treatment data in elasticsearch...");
+        // todo
+        return ResponseEntity.ok("Success!");
+    }
 }
