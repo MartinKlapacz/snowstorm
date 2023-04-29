@@ -5,27 +5,31 @@ import org.snomed.snowstorm.avelios.queryclient.AveliosMappingService;
 import org.snomed.snowstorm.avelios.queryclient.SnowstormSearchService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
+import org.springframework.data.elasticsearch.core.query.IndexQuery;
+import org.springframework.data.elasticsearch.core.query.IndexQueryBuilder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 @RestController
 @RequestMapping(value = "/avelios", produces = "application/json")
 public class AveliosController {
 
     @Autowired
-    TokenMatchMatrixService tokenMatchMatrixService;
+    private TokenMatchMatrixService tokenMatchMatrixService;
 
     @Autowired
-    SnowstormSearchService snowstormSearchService;
+    private SnowstormSearchService snowstormSearchService;
 
     @Autowired
-    AveliosMappingService aveliosMappingService;
+    private AveliosMappingService aveliosMappingService;
+
+    @Autowired
+    private ElasticsearchOperations elasticsearchOperations;
 
     @Value("${avelios.converter.threshold}")
     double threshold;
@@ -63,13 +67,38 @@ public class AveliosController {
         return new ResponseEntity<>(conceptIds, HttpStatus.OK);
     }
 
+    private static final Set<String> requiredBodyKeys = Set.of(
+            "sctIdsFromRules",
+            "knowledgeInputIds",
+            "blockStringRepresentations"
+    );
+
     @PostMapping(value = "publish")
     public ResponseEntity<String> publishFinishedTreatmentData(
             @RequestParam String patientId,
             @RequestParam String treatmentId,
-            @RequestParam String visitId, @RequestBody Map<String, List<String>> body) {
-        System.out.println("Storing treatment data in elasticsearch...");
-        // todo
-        return ResponseEntity.ok("Success!");
+            @RequestParam String visitId,
+            @RequestBody Map<String, List<String>> body) {
+
+        if (!body.keySet().containsAll(requiredBodyKeys)) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        List<String> sctIdsFromRules = body.get("sctIdsFromRules");
+        List<String> knowledgeInputIds = body.get("knowledgeInputIds");
+        List<String> blockStringRepresentations = body.get("blockStringRepresentations");
+
+        var treatmentFinishSctResults = new SnomedCtDataForTreatment(
+                patientId,
+                treatmentId,
+                visitId,
+                sctIdsFromRules,
+                new ArrayList<>(snowstormSearchService.findConceptAncestors(sctIdsFromRules))
+        );
+
+        IndexQuery indexQuery = new IndexQueryBuilder().withObject(treatmentFinishSctResults).build();
+        String res = elasticsearchOperations.index(indexQuery, IndexCoordinates.of("test-index"));
+
+        return ResponseEntity.ok(res);
     }
 }
