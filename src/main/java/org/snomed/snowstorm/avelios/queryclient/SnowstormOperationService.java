@@ -86,6 +86,7 @@ public class SnowstormOperationService {
 
     @PostConstruct
     private void setupSctIndexes() throws IOException {
+        // make sure treatment data indexes exist
         for (String indexName: METHOD_IDENTIFIER_TO_INDEX_NAME.values()) {
             GetIndexRequest request = new GetIndexRequest(indexName);
             request.local(false);
@@ -118,25 +119,6 @@ public class SnowstormOperationService {
         }
     }
 
-    public ConceptView findConcept(String conceptId) {
-        return conceptController.findBrowserConcept(BRANCH, conceptId, Relationship.CharacteristicType.inferred, Config.DEFAULT_ACCEPT_LANG_HEADER);
-    }
-
-    public Set<String> findConceptChildren(Collection<String> conceptIds) {
-        String findChildrenECL = conceptIds.stream().map(id -> "<<! " + id).collect(Collectors.joining(" OR "));
-        return findConceptsByECL(conceptIds, findChildrenECL);
-    }
-
-    public Set<String> findConceptParents(Collection<String> conceptIds) {
-        String findParentsECL = conceptIds.stream().map(id -> ">>! " + id).collect(Collectors.joining(" OR "));
-        return findConceptsByECL(conceptIds, findParentsECL);
-    }
-
-    public Set<String> findConceptDescendants(Collection<String> conceptIds) {
-        String findParentsECL = conceptIds.stream().map(id -> "<< " + id).collect(Collectors.joining(" OR "));
-        return findConceptsByECL(conceptIds, findParentsECL);
-    }
-
     public Set<String> findConceptAncestors(String conceptId) {
         return findConceptAncestors(Set.of(conceptId));
     }
@@ -161,11 +143,6 @@ public class SnowstormOperationService {
     }
 
 
-
-    private Set<String> findConceptsByECL(Collection<String> conceptIds, String ecl) {
-        return findConceptsByECL(conceptIds, ecl, null);
-    }
-
     private Set<String> findConceptsByECL(Collection<String> conceptIds, String ecl, Integer limit) {
         ConceptSearchRequest conceptSearchRequest = new ConceptSearchRequest();
         conceptSearchRequest.setTermActive(true);
@@ -179,17 +156,6 @@ public class SnowstormOperationService {
                 .collect(Collectors.toSet());
     }
 
-    public Set<ConceptMini> browserDescriptionSearch(String textInput) {
-        Page<BrowserDescriptionSearchResult> browserDescriptionSearchResults = descriptionController.findBrowserDescriptions(
-                BRANCH, textInput, true, null,
-                null, null, null, null, null, null,
-                null, true, null, true,
-                DescriptionService.SearchMode.STANDARD, OFF_SET, LIMIT, ACCEPT_LANGUAGE_HEADER);
-
-        return browserDescriptionSearchResults.getContent().stream()
-                .map(BrowserDescriptionSearchResult::getConcept)
-                .collect(Collectors.toSet());
-    }
 
     public Collection<ConceptMini> findConceptChildren(String conceptId) {
         try {
@@ -198,40 +164,6 @@ public class SnowstormOperationService {
         } catch (ServiceException e) {
             throw new RuntimeException(e.getMessage());
         }
-    }
-
-    public Optional<Relationship> findRelationship(String relationshipId) {
-        return Optional.ofNullable(relationshipService.findRelationship(BRANCH, relationshipId));
-    }
-
-    public List<Relationship> findRelationships(RelationshipQueryOptions options) {
-        Page<Relationship> relationshipPage = relationshipService.findRelationships(
-                BRANCH, options.getRelationshipId(),
-                true,
-                null,
-                null,
-                options.getSourceConcept(),
-                null,
-                options.getDestinationConcept(),
-                null,
-                null,
-                options.getPageRequest()
-        );
-        return relationshipPage.getContent();
-    }
-
-
-    public List<Relationship> findInboundRelationships(String conceptId) {
-        List<Relationship> inboundRelationships = relationshipService.findInboundRelationships(conceptId, BranchPathUriUtil.decodePath(BRANCH), null).getContent();
-        return new InboundRelationshipsResult(inboundRelationships).getInboundRelationships();
-    }
-
-    public Description findDescription(String descriptionId) {
-        return descriptionController.fetchDescription(BRANCH, descriptionId);
-    }
-
-    public boolean isClinicalFining(String conceptId){
-        return findConceptAncestors(conceptId).contains("404684003");
     }
 
     public void saveSnomedCtDataForTreatmentByMethod(String patientId, String treatmentId, String visitId, Collection<String> inputData, TranslationMethod translationMethod) {
