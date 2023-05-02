@@ -8,9 +8,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.*;
-
-import static org.snomed.snowstorm.avelios.queryclient.SnowstormOperationService.METHOD_IDENTIFIER_TO_INDEX_NAME;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping(value = "/avelios", produces = "application/json")
@@ -57,17 +59,12 @@ public class AveliosController {
             @RequestBody Map<String, List<String>> body) {
 
         for (String methodIdentifier: body.keySet()) {
-            String indexName = METHOD_IDENTIFIER_TO_INDEX_NAME.get(methodIdentifier);
-            if (indexName == null) {
-                return ResponseEntity.badRequest().build();
-            }
-
-            snowstormOperationService.saveSnomedCtDataForTreatmentIntoCollection(
+            snowstormOperationService.saveSnomedCtDataForTreatmentByMethod(
                     patientId,
                     treatmentId,
                     visitId,
                     body.get(methodIdentifier),
-                    indexName
+                    TranslationMethod.valueOf(methodIdentifier)
             );
         }
         return ResponseEntity.ok("success");
@@ -76,7 +73,9 @@ public class AveliosController {
     @GetMapping(value = "findTreatments")
     public ResponseEntity<List<Map<String, String>>> findTreatmentsWithSnomedCt(@RequestParam String targetSctIds, @RequestParam String translationMethods) {
         List<String> targetSctIdList = Arrays.asList(targetSctIds.split(","));
-        List<String> translationMethodList = Arrays.asList(translationMethods.split(","));
+        List<TranslationMethod> translationMethodList = Arrays.asList(translationMethods.split(",")).stream()
+                .map(TranslationMethod::valueOf)
+                .collect(Collectors.toList());
         List<Map<String, String>> patientTreatmentFinishList = snowstormOperationService.findTreatmentsWithSnomedCt(
                 targetSctIdList,
                 translationMethodList

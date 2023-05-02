@@ -1,0 +1,7 @@
+package org.snomed.snowstorm.avelios;
+
+public enum TranslationMethod {
+    TRANSLATION_METHOD_RULE_BASED,
+    TRANSLATION_METHOD_KNOWLEDGE_INPUT_MAPPING,
+    TRANSLATION_METHOD_FUZZY_TOKEN_MATCHING
+}
