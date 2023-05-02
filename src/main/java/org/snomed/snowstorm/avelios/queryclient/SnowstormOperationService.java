@@ -15,6 +15,7 @@ import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.snomed.snowstorm.avelios.SnomedCtDataForTreatment;
 import org.snomed.snowstorm.avelios.TranslationMethod;
+import org.snomed.snowstorm.avelios.converterPipeline.TokenMatchMatrixService;
 import org.snomed.snowstorm.config.Config;
 import org.snomed.snowstorm.core.data.domain.ConceptMini;
 import org.snomed.snowstorm.core.data.domain.ConceptView;
@@ -72,6 +73,9 @@ public class SnowstormOperationService {
 
     @Autowired
     ElasticsearchOperations elasticsearchOperations;
+
+    @Autowired
+    TokenMatchMatrixService matchMatrixService;
 
 
     public static final Map<TranslationMethod, String> METHOD_IDENTIFIER_TO_INDEX_NAME = Map.ofEntries(
@@ -230,35 +234,41 @@ public class SnowstormOperationService {
         return findConceptAncestors(conceptId).contains("404684003");
     }
 
-    public void saveSnomedCtDataForTreatmentByMethod(String patientId, String treatmentId, String visitId, Collection<String> sctIds, TranslationMethod translationMethod) {
-        if (sctIds.isEmpty()){
+    public void saveSnomedCtDataForTreatmentByMethod(String patientId, String treatmentId, String visitId, Collection<String> inputData, TranslationMethod translationMethod) {
+        if (inputData.isEmpty()){
             return;
         }
         SnomedCtDataForTreatment snomedCtDataForTreatment = null;
+        Set<String> directHits = new HashSet<>();
 
         switch (translationMethod) {
             case TRANSLATION_METHOD_RULE_BASED:
-                snomedCtDataForTreatment = new SnomedCtDataForTreatment(
-                        patientId,
-                        treatmentId,
-                        visitId,
-                        // store direct hits
-                        sctIds,
-                        // precompute ancestors for queries
-                        findConceptAncestors(sctIds)
-                );
-            case TRANSLATION_METHOD_FUZZY_TOKEN_MATCHING:
-            case TRANSLATION_METHOD_KNOWLEDGE_INPUT_MAPPING:
+                directHits = new HashSet<>(inputData);
                 break;
+            case TRANSLATION_METHOD_FUZZY_TOKEN_MATCHING:
+                for (String input: inputData) {
+                    Map<String, Integer> matchingResult = matchMatrixService.generateMatchingDescriptions(input, 50);
+                    directHits.addAll(matchingResult.keySet());
+                }
+                break;
+            case TRANSLATION_METHOD_KNOWLEDGE_INPUT_MAPPING:
+                return;
             default:
                 throw new RuntimeException("Invalid translation method");
         }
 
+        snomedCtDataForTreatment = new SnomedCtDataForTreatment(
+                patientId,
+                treatmentId,
+                visitId,
+                // here inputData are already computed concept ids
+                directHits,
+                // precompute ancestors for queries
+                findConceptAncestors(directHits)
+        );
         IndexQuery indexQuery = new IndexQueryBuilder().withObject(snomedCtDataForTreatment).build();
         elasticsearchOperations.index(indexQuery, IndexCoordinates.of(METHOD_IDENTIFIER_TO_INDEX_NAME.get(translationMethod)));
     }
-
-    ObjectMapper objectMapper = new ObjectMapper();
 
     @SneakyThrows
     public List<Map<String, String>> findTreatmentsWithSnomedCt(List<String> targetSctIdList, List<TranslationMethod> translationMethods) {
