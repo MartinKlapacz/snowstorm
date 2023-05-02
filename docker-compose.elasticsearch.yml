@@ -18,7 +18,7 @@ services:
       - elastic:/usr/share/elasticsearch/data
       - ./elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
     ports:
-      - 9201:9200
+      - "9201:9200"
     networks:
       elk:
         aliases:
