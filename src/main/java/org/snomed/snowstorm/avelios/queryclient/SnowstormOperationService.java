@@ -1,7 +1,5 @@
 package org.snomed.snowstorm.avelios.queryclient;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.kaicode.rest.util.branchpathrewrite.BranchPathUriUtil;
 import lombok.SneakyThrows;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
@@ -18,20 +16,12 @@ import org.snomed.snowstorm.avelios.TranslationMethod;
 import org.snomed.snowstorm.avelios.converterPipeline.TokenMatchMatrixService;
 import org.snomed.snowstorm.config.Config;
 import org.snomed.snowstorm.core.data.domain.ConceptMini;
-import org.snomed.snowstorm.core.data.domain.ConceptView;
-import org.snomed.snowstorm.core.data.domain.Description;
 import org.snomed.snowstorm.core.data.domain.Relationship;
-import org.snomed.snowstorm.core.data.services.DescriptionService;
-import org.snomed.snowstorm.core.data.services.RelationshipService;
 import org.snomed.snowstorm.core.data.services.ServiceException;
 import org.snomed.snowstorm.rest.ConceptController;
-import org.snomed.snowstorm.rest.DescriptionController;
-import org.snomed.snowstorm.rest.pojo.BrowserDescriptionSearchResult;
 import org.snomed.snowstorm.rest.pojo.ConceptSearchRequest;
-import org.snomed.snowstorm.rest.pojo.InboundRelationshipsResult;
 import org.snomed.snowstorm.rest.pojo.ItemsPage;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
@@ -55,18 +45,9 @@ public class SnowstormOperationService {
 
     public static int count = 0;
     private final String BRANCH = "MAIN";
-    private final int OFF_SET = 0;
-    private final int LIMIT = 1000;
-    private final String ACCEPT_LANGUAGE_HEADER = "en";
 
     @Autowired
     private ConceptController conceptController;
-
-    @Autowired
-    private RelationshipService relationshipService;
-
-    @Autowired
-    private DescriptionController descriptionController;
 
     @Autowired
     RestHighLevelClient restHighLevelClient;
@@ -81,7 +62,9 @@ public class SnowstormOperationService {
     public static final Map<TranslationMethod, String> METHOD_IDENTIFIER_TO_INDEX_NAME = Map.ofEntries(
             new AbstractMap.SimpleEntry<>(TRANSLATION_METHOD_RULE_BASED, "rule-based-collection"),
             new AbstractMap.SimpleEntry<>(TRANSLATION_METHOD_KNOWLEDGE_INPUT_MAPPING, "knowledge-input-mapping-collection"),
-            new AbstractMap.SimpleEntry<>(TRANSLATION_METHOD_FUZZY_TOKEN_MATCHING, "fuzzy-collection")
+            new AbstractMap.SimpleEntry<>(TRANSLATION_METHOD_FUZZY_TOKEN_MATCHING, "fuzzy-collection"),
+            new AbstractMap.SimpleEntry<>(TRANSLATION_METHOD_ICD10_MAPPING, "icd10-mapping-collection"),
+            new AbstractMap.SimpleEntry<>(TRANSLATION_METHOD_ALPHAID_MAPPING, "alpha-id-mapping-collection")
     );
 
     @PostConstruct
@@ -170,11 +153,14 @@ public class SnowstormOperationService {
         if (inputData.isEmpty()){
             return;
         }
-        SnomedCtDataForTreatment snomedCtDataForTreatment = null;
         Set<String> directHits = new HashSet<>();
 
         switch (translationMethod) {
             case TRANSLATION_METHOD_RULE_BASED:
+            case TRANSLATION_METHOD_KNOWLEDGE_INPUT_MAPPING:
+            case TRANSLATION_METHOD_ICD10_MAPPING:
+            case TRANSLATION_METHOD_ALPHAID_MAPPING:
+                // for these methods sctIds are already found
                 directHits = new HashSet<>(inputData);
                 break;
             case TRANSLATION_METHOD_FUZZY_TOKEN_MATCHING:
@@ -183,19 +169,15 @@ public class SnowstormOperationService {
                     directHits.addAll(matchingResult.keySet());
                 }
                 break;
-            case TRANSLATION_METHOD_KNOWLEDGE_INPUT_MAPPING:
-                return;
             default:
                 throw new RuntimeException("Invalid translation method");
         }
-
-        snomedCtDataForTreatment = new SnomedCtDataForTreatment(
+        var snomedCtDataForTreatment = new SnomedCtDataForTreatment(
                 patientId,
                 treatmentId,
                 visitId,
-                // here inputData are already computed concept ids
                 directHits,
-                // precompute ancestors for queries
+                // precompute ancestors for future queries
                 findConceptAncestors(directHits)
         );
         IndexQuery indexQuery = new IndexQueryBuilder().withObject(snomedCtDataForTreatment).build();

@@ -24,10 +24,8 @@ public class AveliosController {
     @Autowired
     private SnowstormOperationService snowstormOperationService;
 
-
     @Value("${avelios.converter.threshold}")
     double threshold;
-
 
     @GetMapping(value = "matchingMatrix/{input}")
     public ResponseEntity<Map<String, Integer>> mapTextToSnomedCTConcepts(@PathVariable String input) {
