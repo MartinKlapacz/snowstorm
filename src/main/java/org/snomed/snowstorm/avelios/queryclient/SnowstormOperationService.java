@@ -110,7 +110,7 @@ public class SnowstormOperationService {
         return findConceptAncestors(conceptIds, 50);
     }
     public Set<String> findConceptAncestors(Collection<String> conceptIds, Integer limit) {
-        String findParentsECL = conceptIds.stream().map(id -> ">> " + id).collect(Collectors.joining(" OR "));
+        String findParentsECL = conceptIds.stream().map(id -> "> " + id).collect(Collectors.joining(" OR "));
         return findConceptsByECL(conceptIds, findParentsECL, limit);
     }
 
@@ -193,15 +193,26 @@ public class SnowstormOperationService {
                 .map(METHOD_IDENTIFIER_TO_INDEX_NAME::get)
                 .toArray(String[]::new);
 
-        BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+        BoolQueryBuilder sctIdHitAncestorsBoolQueryBuilder = QueryBuilders.boolQuery();
+        BoolQueryBuilder directSctIdHitsBoolQueryBuilder = QueryBuilders.boolQuery();
+
+
         for (String targetSctId : targetSctIdList) {
-            QueryBuilder termQuery = QueryBuilders.termQuery("sctIdHitAncestors", targetSctId);
-            boolQueryBuilder.filter(termQuery);
+            QueryBuilder termQueryForAncestors = QueryBuilders.termQuery("sctIdHitAncestors", targetSctId);
+            sctIdHitAncestorsBoolQueryBuilder.filter(termQueryForAncestors);
+
+            QueryBuilder termQueryForDirectHits = QueryBuilders.termQuery("directSctIdHits", targetSctId);
+            directSctIdHitsBoolQueryBuilder.filter(termQueryForDirectHits);
         }
+
+        // Combine the queries using a should clause to represent OR
+        BoolQueryBuilder combinedBoolQueryBuilder = QueryBuilders.boolQuery();
+        combinedBoolQueryBuilder.should(sctIdHitAncestorsBoolQueryBuilder);
+        combinedBoolQueryBuilder.should(directSctIdHitsBoolQueryBuilder);
 
         // Build the native search query with the bool query
         NativeSearchQuery searchQuery = new NativeSearchQueryBuilder()
-                .withQuery(boolQueryBuilder)
+                .withQuery(combinedBoolQueryBuilder)
                 .build();
 
         // Execute the query and retrieve the hits
