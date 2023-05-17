@@ -64,7 +64,8 @@ public class SnowstormOperationService {
             new AbstractMap.SimpleEntry<>(TRANSLATION_METHOD_KNOWLEDGE_INPUT_MAPPING, "knowledge-input-mapping-collection"),
             new AbstractMap.SimpleEntry<>(TRANSLATION_METHOD_FUZZY_TOKEN_MATCHING, "fuzzy-collection"),
             new AbstractMap.SimpleEntry<>(TRANSLATION_METHOD_ICD10_MAPPING, "icd10-mapping-collection"),
-            new AbstractMap.SimpleEntry<>(TRANSLATION_METHOD_ALPHAID_MAPPING, "alpha-id-mapping-collection")
+            new AbstractMap.SimpleEntry<>(TRANSLATION_METHOD_ALPHAID_MAPPING, "alpha-id-mapping-collection"),
+            new AbstractMap.SimpleEntry<>(TRANSLATION_METHOD_ORPHAID_MAPPING, "orpha-id-mapping-collection")
     );
 
     @PostConstruct
@@ -160,6 +161,7 @@ public class SnowstormOperationService {
             case TRANSLATION_METHOD_KNOWLEDGE_INPUT_MAPPING:
             case TRANSLATION_METHOD_ICD10_MAPPING:
             case TRANSLATION_METHOD_ALPHAID_MAPPING:
+            case TRANSLATION_METHOD_ORPHAID_MAPPING:
                 // for these methods sctIds are already found
                 directHits = new HashSet<>(inputData);
                 break;
