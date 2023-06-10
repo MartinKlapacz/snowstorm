@@ -1,5 +1,7 @@
 package org.snomed.snowstorm.avelios;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
 
@@ -8,6 +10,8 @@ import javax.validation.constraints.Size;
 import java.util.Collection;
 
 
+@Getter
+@Setter
 public class SnomedCtDataForTreatment {
 
     @Field(type = FieldType.Keyword)
@@ -38,44 +42,5 @@ public class SnomedCtDataForTreatment {
         this.directSctIdHits = directSctIdHits;
         this.sctIdHitAncestors = sctIdHitAncestors;
     }
-    // todo fix lombok
-    public String getPatientId() {
-        return patientId;
-    }
 
-    public String getTreatmentId() {
-        return treatmentId;
-    }
-
-    public String getVisitId() {
-        return visitId;
-    }
-
-    public Collection<String> getDirectSctIdHits() {
-        return directSctIdHits;
-    }
-
-    public Collection<String> getSctIdHitAncestors() {
-        return sctIdHitAncestors;
-    }
-
-    public void setPatientId(String patientId) {
-        this.patientId = patientId;
-    }
-
-    public void setTreatmentId(String treatmentId) {
-        this.treatmentId = treatmentId;
-    }
-
-    public void setVisitId(String visitId) {
-        this.visitId = visitId;
-    }
-
-    public void setDirectSctIdHits(Collection<String> directSctIdHits) {
-        this.directSctIdHits = directSctIdHits;
-    }
-
-    public void setSctIdHitAncestors(Collection<String> sctIdHitAncestors) {
-        this.sctIdHitAncestors = sctIdHitAncestors;
-    }
 }
