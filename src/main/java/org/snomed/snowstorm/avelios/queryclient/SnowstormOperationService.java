@@ -11,6 +11,8 @@ import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.snomed.snowstorm.avelios.SnomedCtDataForTreatment;
 import org.snomed.snowstorm.avelios.TranslationMethod;
 import org.snomed.snowstorm.avelios.converterPipeline.TokenMatchMatrixService;
@@ -58,6 +60,8 @@ public class SnowstormOperationService {
     @Autowired
     TokenMatchMatrixService matchMatrixService;
 
+    private final Logger logger = LoggerFactory.getLogger(getClass());
+
 
     public static final Map<TranslationMethod, String> METHOD_IDENTIFIER_TO_INDEX_NAME = Map.ofEntries(
             new AbstractMap.SimpleEntry<>(TRANSLATION_METHOD_RULE_BASED, "rule-based-collection"),
@@ -77,28 +81,21 @@ public class SnowstormOperationService {
             request.includeDefaults(false);
 
             if (!restHighLevelClient.indices().exists(request, RequestOptions.DEFAULT)) {
+                logger.info("Elasticsearch index " + indexName + " missing");
                 Settings settings = Settings.builder()
                         .put("index.number_of_shards", 1)
                         .put("index.number_of_replicas", 1)
                         .build();
 
-                // Define the index mapping
-                XContentBuilder mappingBuilder = XContentFactory.jsonBuilder()
-                        .startObject()
-                        .startObject("properties")
-                        .startObject("field1")
-                        .field("type", "text")
-                        .endObject()
-                        .endObject()
-                        .endObject();
+                XContentBuilder mappingBuilder = XContentFactory.jsonBuilder().startObject().endObject();
 
-                // Create the index request
                 CreateIndexRequest createIndexRequest = new CreateIndexRequest(indexName)
                         .settings(settings)
                         .mapping(mappingBuilder);
 
                 // Send the request and get the response
                 restHighLevelClient.indices().create(createIndexRequest, RequestOptions.DEFAULT);
+                logger.info("Created Elasticsearch index " + indexName);
             }
         }
     }
@@ -107,7 +104,7 @@ public class SnowstormOperationService {
         return findConceptAncestors(Set.of(conceptId));
     }
     public Set<String> findConceptAncestors(Collection<String> conceptIds) {
-        return findConceptAncestors(conceptIds, 50);
+        return findConceptAncestors(conceptIds, 100);
     }
     public Set<String> findConceptAncestors(Collection<String> conceptIds, Integer limit) {
         String findParentsECL = conceptIds.stream().map(id -> "> " + id).collect(Collectors.joining(" OR "));
@@ -183,7 +180,9 @@ public class SnowstormOperationService {
                 findConceptAncestors(directHits)
         );
         IndexQuery indexQuery = new IndexQueryBuilder().withObject(snomedCtDataForTreatment).build();
-        elasticsearchOperations.index(indexQuery, IndexCoordinates.of(METHOD_IDENTIFIER_TO_INDEX_NAME.get(translationMethod)));
+        String indexName = METHOD_IDENTIFIER_TO_INDEX_NAME.get(translationMethod);
+        elasticsearchOperations.index(indexQuery, IndexCoordinates.of(indexName));
+        logger.info("Stored treatment finish in " + indexName);
     }
 
     @SneakyThrows

@@ -14,6 +14,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static org.snomed.snowstorm.avelios.TranslationMethod.TRANSLATION_METHOD_NONE;
+
 @RestController
 @RequestMapping(value = "/avelios", produces = "application/json")
 public class AveliosController {
@@ -57,12 +59,16 @@ public class AveliosController {
             @RequestBody Map<String, List<String>> body) {
 
         for (String methodIdentifier: body.keySet()) {
+            TranslationMethod translationMethod = TranslationMethod.saveValueOf(methodIdentifier);
+            if (translationMethod == TRANSLATION_METHOD_NONE){
+                ResponseEntity.badRequest().build();
+            }
             snowstormOperationService.saveSnomedCtDataForTreatmentByMethod(
                     patientId,
                     treatmentId,
                     visitId,
                     body.get(methodIdentifier),
-                    TranslationMethod.valueOf(methodIdentifier)
+                    translationMethod
             );
         }
         return ResponseEntity.ok("success");
@@ -72,8 +78,11 @@ public class AveliosController {
     public ResponseEntity<List<Map<String, String>>> findTreatmentsWithSnomedCt(@RequestParam String targetSctIds, @RequestParam String translationMethods) {
         List<String> targetSctIdList = Arrays.asList(targetSctIds.split(","));
         List<TranslationMethod> translationMethodList = Arrays.asList(translationMethods.split(",")).stream()
-                .map(TranslationMethod::valueOf)
+                .map(TranslationMethod::saveValueOf)
                 .collect(Collectors.toList());
+        if (translationMethodList.contains(TRANSLATION_METHOD_NONE)) {
+            return ResponseEntity.badRequest().build();
+        }
         List<Map<String, String>> patientTreatmentFinishList = snowstormOperationService.findTreatmentsWithSnomedCt(
                 targetSctIdList,
                 translationMethodList
