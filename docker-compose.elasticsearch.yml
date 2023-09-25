@@ -18,7 +18,7 @@ services:
       - elastic:/usr/share/elasticsearch/data
       - ./elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
     ports:
-      - "9201:9200"
+      - "${ELASTICSEARCH_PORT}:9200"
     networks:
       elk:
         aliases:
@@ -38,7 +38,6 @@ services:
       - ELASTICSEARCH_HOSTS=http://es:${ELASTICSEARCH_PORT}
       - ELASTICSEARCH_USERNAME=kibana_system
       - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
-#    mem_limit: ${MEM_LIMIT}
     healthcheck:
       test:
         [
