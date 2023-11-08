@@ -61,7 +61,7 @@ public class AveliosController {
         for (String methodIdentifier: body.keySet()) {
             TranslationMethod translationMethod = TranslationMethod.saveValueOf(methodIdentifier);
             if (translationMethod == TRANSLATION_METHOD_NONE){
-                ResponseEntity.badRequest().build();
+                return ResponseEntity.badRequest().build();
             }
             snowstormOperationService.saveSnomedCtDataForTreatmentByMethod(
                     patientId,
