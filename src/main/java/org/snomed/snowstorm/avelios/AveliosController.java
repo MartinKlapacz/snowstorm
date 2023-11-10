@@ -8,10 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.snomed.snowstorm.avelios.TranslationMethod.TRANSLATION_METHOD_NONE;
@@ -38,40 +35,24 @@ public class AveliosController {
     }
 
     @PostMapping(value = "filterPatients/{targetConceptIds}")
-    public ResponseEntity<List<String>> filterPatientsWithMatchingConcepts(@PathVariable String targetConceptIds, @RequestBody Map<String, Set<String>> patientData){
+    public ResponseEntity<List<String>> filterPatientsWithMatchingConcepts(@PathVariable String targetConceptIds, @RequestBody Map<String, Set<String>> patientData) {
         List<String> targetConceptIdList = Arrays.asList(targetConceptIds.split(","));
         List<String> matchingPatients = snowstormOperationService.filterPatientsWithPredecessorConcept(targetConceptIdList, patientData);
         return new ResponseEntity<>(matchingPatients, HttpStatus.OK);
     }
 
-    @GetMapping(value = "ancestors/{conceptId}")
-    public ResponseEntity<Set<String>> getAncestors(@PathVariable String conceptId) {
-        Set<String> ancestorIds = snowstormOperationService.findConceptAncestors(conceptId);
-        return new ResponseEntity<>(ancestorIds, HttpStatus.OK);
-    }
-
-
-    @PostMapping(value = "publish")
-    public ResponseEntity<String> publishFinishedTreatmentData(
-            @RequestParam String patientId,
-            @RequestParam String treatmentId,
-            @RequestParam String visitId,
-            @RequestBody Map<String, List<String>> body) {
-
-        for (String methodIdentifier: body.keySet()) {
+    @PostMapping(value = "ancestors")
+    public ResponseEntity<Map<String, Collection<String>>> getAncestorsPerMethod(@RequestBody Map<String, List<String>> body) {
+        Map<String, Collection<String>> responseData = new HashMap<>();
+        for (String methodIdentifier : body.keySet()) {
             TranslationMethod translationMethod = TranslationMethod.saveValueOf(methodIdentifier);
-            if (translationMethod == TRANSLATION_METHOD_NONE){
+            if (translationMethod == TRANSLATION_METHOD_NONE) {
                 return ResponseEntity.badRequest().build();
             }
-            snowstormOperationService.saveSnomedCtDataForTreatmentByMethod(
-                    patientId,
-                    treatmentId,
-                    visitId,
-                    body.get(methodIdentifier),
-                    translationMethod
-            );
+            Collection<String> ancestorIds = snowstormOperationService.findConceptAncestors(body.get(methodIdentifier));
+            responseData.put(translationMethod.toString(), ancestorIds);
         }
-        return ResponseEntity.ok("success");
+        return ResponseEntity.ok(responseData);
     }
 
     @GetMapping(value = "findTreatments")
